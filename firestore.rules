@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Admin emails allowed to manage the dashboard.
+    // MUST stay in sync with VITE_ADMIN_EMAILS in the client build.
+    function isAdmin() {
+      return request.auth != null &&
+        request.auth.token.email in [
+          "abdo01554671424@gmail.com"
+        ];
+    }
+
+    // Site Settings — public content, admin-only writes
+    match /site_settings/{settingsId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Service Overrides — public content, admin-only writes
+    match /service_overrides/{overrideId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Contact Requests — contains PII (name, phone, email).
+    // Anyone may create one, but only admins can read/update/delete.
+    match /contact_requests/{requestId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Visits — anonymous analytics, admin-only reads
+    match /visits/{visitId} {
+      allow create: if true;
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+  }
+}

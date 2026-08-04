@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+# Admin area is not for search engines
+Disallow: /dashboard
+
+Sitemap: https://dalni-agency.vercel.app/sitemap.xml
