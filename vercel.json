@@ -1,6 +1,6 @@
 {
   "name": "dalni-agency",
-  "rewrites": [{ "source": "/((?!assets/|og-image|robots.txt|sitemap.xml|favicon|google94e63572eb6cf5d6.html).*)", "destination": "/index.html" }],
+  "rewrites": [{ "source": "/((?!assets/|og-image|robots.txt|sitemap.xml|favicon|google94e63572eb6cf5d6.html|google44d8479bff491630.html).*)", "destination": "/index.html" }],
   "headers": [
     {
       "source": "/assets/(.*)",
