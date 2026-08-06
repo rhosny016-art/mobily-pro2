@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { BarChart3, ExternalLink, Inbox, LogOut, Menu, Package, Settings, X } from "lucide-react";
 import Logo from "@/components/Logo";
-import { adminLogout, isAdmin } from "@/lib/store";
+import { adminLogout, getAdminUser } from "@/lib/store";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
 const NAV = [
@@ -15,6 +15,7 @@ const NAV = [
 export default function DashboardLayout() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [authorized, setAuthorized] = useState(false);
 
   usePageMeta({
     title: "لوحة تحكم دلّني",
@@ -24,7 +25,18 @@ export default function DashboardLayout() {
   });
 
   useEffect(() => {
-    if (!isAdmin()) navigate("/dashboard/login", { replace: true });
+    let live = true;
+    getAdminUser().then((user) => {
+      if (!live) return;
+      if (user) {
+        setAuthorized(true);
+      } else {
+        navigate("/dashboard/login", { replace: true });
+      }
+    });
+    return () => {
+      live = false;
+    };
   }, [navigate]);
 
   const logout = () => {
@@ -67,6 +79,14 @@ export default function DashboardLayout() {
       </div>
     </>
   );
+
+  if (!authorized) {
+    return (
+      <div className="min-h-screen bg-muted flex items-center justify-center">
+        <span className="w-8 h-8 border-2 border-slate-300 border-t-primary rounded-full animate-spin" aria-label="جارٍ التحقق من الصلاحية" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-muted">

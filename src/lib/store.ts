@@ -1,23 +1,22 @@
 import { DEFAULT_SETTINGS, SERVICES, type Service, type SiteSettings } from "./siteData";
-import { db, auth, googleProvider } from "./firebase";
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  orderBy,
-  limit
-} from "firebase/firestore";
-import { signInWithPopup, signOut } from "firebase/auth";
+import type { Auth, User } from "firebase/auth";
 
-const LOCAL_KEYS = {
-  visitorId: "dalni_visitor_id",
-  admin: "dalni_admin",
-};
+// ---------------------------------------------------------------------------
+// Firebase is loaded lazily via dynamic import() so the public marketing pages
+// never pay the ~160 kB (gzip) Firebase bundle cost on first paint. Every
+// function below pulls in the SDK only when it is actually needed.
+// ---------------------------------------------------------------------------
+
+let cachedAuth: Auth | null = null;
+
+async function getFirebase() {
+  const m = await import("./firebase");
+  cachedAuth = m.auth;
+  return m;
+}
+
+const getFirestoreApi = () => import("firebase/firestore");
+const getAuthApi = () => import("firebase/auth");
 
 // ---------- Error Handling as per Firebase Skill ----------
 export enum OperationType {
@@ -49,16 +48,17 @@ export interface FirestoreErrorInfo {
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
   const errMsg = error instanceof Error ? error.message : String(error);
   const isOffline = errMsg.includes("client is offline") || errMsg.includes("unavailable");
-  
+  const currentUser = cachedAuth?.currentUser;
+
   const errInfo: FirestoreErrorInfo = {
     error: errMsg,
     authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+      userId: currentUser?.uid,
+      email: currentUser?.email,
+      emailVerified: currentUser?.emailVerified,
+      isAnonymous: currentUser?.isAnonymous,
+      tenantId: currentUser?.tenantId,
+      providerInfo: currentUser?.providerData?.map(provider => ({
         providerId: provider.providerId,
         email: provider.email,
       })) || []
@@ -72,7 +72,7 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   } else {
     console.warn('Firestore offline notice for path:', path);
   }
-  
+
   throw new Error(JSON.stringify(errInfo));
 }
 
@@ -86,6 +86,7 @@ export const ALLOWED_EMAILS: string[] = (import.meta.env.VITE_ADMIN_EMAILS || "a
 // ---------- Settings ----------
 export async function getSiteSettings(): Promise<SiteSettings> {
   try {
+    const [{ db }, { doc, getDoc }] = await Promise.all([getFirebase(), getFirestoreApi()]);
     const docRef = doc(db, "site_settings", "default");
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
@@ -104,6 +105,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
 export async function saveSiteSettings(settings: SiteSettings): Promise<void> {
   const path = "site_settings/default";
   try {
+    const [{ db }, { doc, setDoc }] = await Promise.all([getFirebase(), getFirestoreApi()]);
     const docRef = doc(db, "site_settings", "default");
     await setDoc(docRef, { data: settings }, { merge: true });
   } catch (error) {
@@ -116,6 +118,7 @@ type ServiceOverride = Partial<Pick<Service, "featured" | "visible" | "order" | 
 
 export async function getServices(): Promise<Service[]> {
   try {
+    const [{ db }, { collection, getDocs }] = await Promise.all([getFirebase(), getFirestoreApi()]);
     const querySnapshot = await getDocs(collection(db, "service_overrides"));
     const overrides: Record<string, ServiceOverride> = {};
     querySnapshot.forEach((docSnap) => {
@@ -139,6 +142,7 @@ export async function getServiceById(id: string): Promise<Service | undefined> {
 export async function updateService(id: string, patch: ServiceOverride): Promise<void> {
   const path = `service_overrides/${id}`;
   try {
+    const [{ db }, { doc, getDoc, setDoc }] = await Promise.all([getFirebase(), getFirestoreApi()]);
     const docRef = doc(db, "service_overrides", id);
     const docSnap = await getDoc(docRef);
     const existing = docSnap.exists() ? (docSnap.data().data || {}) : {};
@@ -172,6 +176,7 @@ export interface ContactRequest {
 
 export async function getRequests(): Promise<ContactRequest[]> {
   try {
+    const [{ db }, { collection, getDocs, query, orderBy }] = await Promise.all([getFirebase(), getFirestoreApi()]);
     const q = query(collection(db, "contact_requests"), orderBy("created_date", "desc"));
     const querySnapshot = await getDocs(q);
     const requests: ContactRequest[] = [];
@@ -188,23 +193,25 @@ export async function getRequests(): Promise<ContactRequest[]> {
   }
 }
 
+/**
+ * Creates a contact request. Throws on failure so the caller can show a real
+ * error state instead of a false success message.
+ */
 export async function addRequest(data: Omit<ContactRequest, "id" | "status" | "created_date">): Promise<void> {
-  try {
-    const newId = doc(collection(db, "contact_requests")).id;
-    const newRequest = {
-      ...data,
-      id: newId,
-      status: "new" as const,
-      created_date: new Date().toISOString()
-    };
-    await setDoc(doc(db, "contact_requests", newId), newRequest);
-  } catch (error) {
-    console.warn("Failed to add contact request:", error);
-  }
+  const [{ db }, { collection, doc, setDoc }] = await Promise.all([getFirebase(), getFirestoreApi()]);
+  const newId = doc(collection(db, "contact_requests")).id;
+  const newRequest = {
+    ...data,
+    id: newId,
+    status: "new" as const,
+    created_date: new Date().toISOString()
+  };
+  await setDoc(doc(db, "contact_requests", newId), newRequest);
 }
 
 export async function updateRequestStatus(id: string, status: ContactRequest["status"]): Promise<void> {
   try {
+    const [{ db }, { doc, updateDoc }] = await Promise.all([getFirebase(), getFirestoreApi()]);
     const docRef = doc(db, "contact_requests", id);
     await updateDoc(docRef, { status });
   } catch (error) {
@@ -214,6 +221,7 @@ export async function updateRequestStatus(id: string, status: ContactRequest["st
 
 export async function deleteRequest(id: string): Promise<void> {
   try {
+    const [{ db }, { doc, deleteDoc }] = await Promise.all([getFirebase(), getFirestoreApi()]);
     const docRef = doc(db, "contact_requests", id);
     await deleteDoc(docRef);
   } catch (error) {
@@ -229,6 +237,10 @@ export interface Visit {
   created_date: string;
 }
 
+const LOCAL_KEYS = {
+  visitorId: "dalni_visitor_id",
+};
+
 export function getVisitorId(): string {
   let id = localStorage.getItem(LOCAL_KEYS.visitorId);
   if (!id) {
@@ -238,8 +250,9 @@ export function getVisitorId(): string {
   return id;
 }
 
-export async function trackVisit(page: string): Promise<void> {
+async function persistVisit(page: string): Promise<void> {
   try {
+    const [{ db }, { collection, doc, setDoc }] = await Promise.all([getFirebase(), getFirestoreApi()]);
     const newId = doc(collection(db, "visits")).id;
     const newVisit: Visit = {
       page,
@@ -253,8 +266,23 @@ export async function trackVisit(page: string): Promise<void> {
   }
 }
 
+/**
+ * Fire-and-forget visit tracking. Deferred to browser idle time so analytics
+ * never competes with critical rendering or interaction.
+ */
+export function trackVisit(page: string): void {
+  if (typeof window === "undefined") return;
+  const w = window as Window & { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => void };
+  if (typeof w.requestIdleCallback === "function") {
+    w.requestIdleCallback(() => void persistVisit(page), { timeout: 5000 });
+  } else {
+    setTimeout(() => void persistVisit(page), 2000);
+  }
+}
+
 export async function getVisits(): Promise<Visit[]> {
   try {
+    const [{ db }, { collection, getDocs, query, orderBy, limit }] = await Promise.all([getFirebase(), getFirestoreApi()]);
     const q = query(collection(db, "visits"), orderBy("created_date", "desc"), limit(1000));
     const querySnapshot = await getDocs(q);
     const visits: Visit[] = [];
@@ -269,42 +297,40 @@ export async function getVisits(): Promise<Visit[]> {
 }
 
 // ---------- Admin Auth ----------
-export function isAdmin(): boolean {
-  // Check localstorage or active user session
-  const localAdmin = localStorage.getItem(LOCAL_KEYS.admin) === "1";
-  const user = auth.currentUser;
-  if (user && user.email) {
-    const emailLower = user.email.toLowerCase();
-    if (ALLOWED_EMAILS.includes(emailLower)) {
-      return true;
+
+/**
+ * Resolves the currently signed-in admin (if any) from the real Firebase Auth
+ * session. This is the ONLY source of truth for admin access — no local
+ * storage flags. Firestore security rules independently enforce the same
+ * email allow-list server-side.
+ */
+export function getAdminUser(): Promise<User | null> {
+  return (async () => {
+    const [{ auth }, { onAuthStateChanged }] = await Promise.all([getFirebase(), getAuthApi()]);
+    const user = await new Promise<User | null>((resolve) => {
+      const unsub = onAuthStateChanged(auth, (u) => {
+        unsub();
+        resolve(u);
+      });
+    });
+    if (user?.email && ALLOWED_EMAILS.includes(user.email.toLowerCase())) {
+      return user;
     }
-  }
-  return localAdmin;
+    return null;
+  })();
 }
 
-export async function adminGoogleLogin(providedEmail?: string): Promise<boolean> {
-  if (providedEmail) {
-    const emailLower = providedEmail.trim().toLowerCase();
-    if (ALLOWED_EMAILS.includes(emailLower)) {
-      localStorage.setItem(LOCAL_KEYS.admin, "1");
-      return true;
-    } else {
-      localStorage.removeItem(LOCAL_KEYS.admin);
-      throw new Error("هذا الحساب محظور وليس لديه صلاحية الدخول للوحة التحكم.");
-    }
-  }
-
+/** Google Sign-In for admins. Real OAuth only — there is no email-only path. */
+export async function adminGoogleLogin(): Promise<boolean> {
+  const [{ auth, googleProvider }, { signInWithPopup, signOut }] = await Promise.all([getFirebase(), getAuthApi()]);
   try {
     const result = await signInWithPopup(auth, googleProvider);
     const email = result.user?.email?.toLowerCase();
     if (email && ALLOWED_EMAILS.includes(email)) {
-      localStorage.setItem(LOCAL_KEYS.admin, "1");
       return true;
-    } else {
-      await signOut(auth);
-      localStorage.removeItem(LOCAL_KEYS.admin);
-      throw new Error("هذا الحساب محظور وليس لديه صلاحية الدخول للوحة التحكم.");
     }
+    await signOut(auth);
+    throw new Error("هذا الحساب محظور وليس لديه صلاحية الدخول للوحة التحكم.");
   } catch (err: any) {
     console.error("Google sign-in error:", err);
     throw err;
@@ -312,8 +338,8 @@ export async function adminGoogleLogin(providedEmail?: string): Promise<boolean>
 }
 
 export async function adminLogout(): Promise<void> {
-  localStorage.removeItem(LOCAL_KEYS.admin);
   try {
+    const [{ auth }, { signOut }] = await Promise.all([getFirebase(), getAuthApi()]);
     await signOut(auth);
   } catch (e) {
     console.error("Error logging out from Firebase:", e);

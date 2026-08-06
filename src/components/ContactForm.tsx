@@ -11,6 +11,8 @@ export default function ContactForm({ defaultSubject = "" }: { defaultSubject?: 
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // Honeypot field — hidden from real users, bots fill it in.
+  const [company, setCompany] = useState("");
 
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -49,6 +51,11 @@ export default function ContactForm({ defaultSubject = "" }: { defaultSubject?: 
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Honeypot: silently accept bot submissions without storing them.
+    if (company.trim()) {
+      setSuccess(true);
+      return;
+    }
     if (!validate()) {
       setError("يرجى تصحيح الحقول المميزة بالأحمر أولاً.");
       return;
@@ -91,6 +98,19 @@ export default function ContactForm({ defaultSubject = "" }: { defaultSubject?: 
 
   return (
     <form onSubmit={submit} className="bg-white rounded-2xl border border-border p-7 space-y-4 shadow-sm">
+      {/* Honeypot anti-spam field — hidden from real users. */}
+      <div className="absolute -left-[9999px] top-auto w-px h-px overflow-hidden" aria-hidden="true">
+        <label htmlFor="company-hp">اسم الشركة (اتركه فارغاً)</label>
+        <input
+          id="company-hp"
+          type="text"
+          name="company"
+          tabIndex={-1}
+          autoComplete="off"
+          value={company}
+          onChange={(e) => setCompany(e.target.value)}
+        />
+      </div>
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-bold mb-1.5">الاسم *</label>
