@@ -1,5 +1,3 @@
-import { motion } from "framer-motion";
-
 interface LogoProps {
   size?: number;
   animated?: boolean;
@@ -8,14 +6,7 @@ interface LogoProps {
 
 export default function Logo({ size = 36, animated = true, light = false }: LogoProps) {
   return (
-    <motion.div
-      className="flex items-center gap-2.5 select-none cursor-pointer group shrink-0"
-      initial={animated ? { opacity: 0, x: 10 } : false}
-      animate={{ opacity: 1, x: 0 }}
-      whileHover="hover"
-      dir="rtl"
-      aria-label="دلّني"
-    >
+    <div className="flex items-center gap-2.5 select-none cursor-pointer group shrink-0" dir="rtl" aria-label="دلّني">
       <div className="relative flex items-center justify-center shrink-0">
         <svg
           width={size}
