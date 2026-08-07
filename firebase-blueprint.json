@@ -1,0 +1,70 @@
+{
+  "entities": {
+    "SiteSettings": {
+      "title": "SiteSettings",
+      "description": "Global agency site settings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "data": { "type": "object" }
+      },
+      "required": ["id", "data"]
+    },
+    "ServiceOverride": {
+      "title": "ServiceOverride",
+      "description": "Overrides for agency services",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "data": { "type": "object" }
+      },
+      "required": ["id", "data"]
+    },
+    "ContactRequest": {
+      "title": "ContactRequest",
+      "description": "Client contact requests and leads",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "subject": { "type": "string" },
+        "message": { "type": "string" },
+        "status": { "type": "string", "enum": ["new", "read", "archive"] },
+        "created_date": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "message", "status", "created_date"]
+    },
+    "Visit": {
+      "title": "Visit",
+      "description": "Analytics tracking details for page visits",
+      "type": "object",
+      "properties": {
+        "page": { "type": "string" },
+        "visitor_id": { "type": "string" },
+        "referrer": { "type": "string" },
+        "created_date": { "type": "string", "format": "date-time" }
+      },
+      "required": ["page", "visitor_id", "created_date"]
+    }
+  },
+  "firestore": {
+    "/site_settings/{settingsId}": {
+      "schema": { "$ref": "#/entities/SiteSettings" },
+      "description": "Global settings document"
+    },
+    "/service_overrides/{overrideId}": {
+      "schema": { "$ref": "#/entities/ServiceOverride" },
+      "description": "Service override configurations"
+    },
+    "/contact_requests/{requestId}": {
+      "schema": { "$ref": "#/entities/ContactRequest" },
+      "description": "Clients contact requests collection"
+    },
+    "/visits/{visitId}": {
+      "schema": { "$ref": "#/entities/Visit" },
+      "description": "User page visits and analytics data"
+    }
+  }
+}
