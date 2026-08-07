@@ -16,8 +16,8 @@ export default function Preloader() {
       return;
     }
     sessionStorage.setItem("dalni_seen_intro", "1");
-    const t = setTimeout(() => setReady(true), 1100);
-    const hide = setTimeout(() => setVisible(false), 1500);
+    const t = setTimeout(() => setReady(true), 380);
+    const hide = setTimeout(() => setVisible(false), 680);
     return () => {
       clearTimeout(t);
       clearTimeout(hide);
@@ -28,7 +28,7 @@ export default function Preloader() {
     <AnimatePresence>
       {visible && (
         <motion.div
-          exit={{ opacity: 0, transition: { duration: 0.45, ease: "easeOut" } }}
+          exit={{ opacity: 0, transition: { duration: 0.28, ease: "easeOut" } }}
           className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-night-950"
           aria-hidden="true"
         >
@@ -71,7 +71,7 @@ export default function Preloader() {
             <motion.p
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.4 }}
+              transition={{ delay: 0.1, duration: 0.3 }}
               className="mt-6 text-2xl font-black text-white tracking-tight"
               style={{ fontFamily: "Alexandria, sans-serif" }}
             >
@@ -94,7 +94,7 @@ export default function Preloader() {
               className="h-full rounded-full bg-gradient-to-l from-brass-600 via-brass-500 to-brass-300"
               initial={{ width: "0%" }}
               animate={{ width: "100%" }}
-              transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
             />
           </div>
         </motion.div>

@@ -141,7 +141,7 @@ export default function Hero() {
           <motion.p
             initial={{ opacity: 0, y: 22 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.55, duration: 0.7, ease: EASE_OUT_EXPO }}
+            transition={{ delay: 0.2, duration: 0.45, ease: EASE_OUT_EXPO }}
             className="mt-7 text-sm sm:text-base md:text-lg text-slate-300/85 font-medium leading-relaxed max-w-xl"
           >
             نساعد الأنشطة التجارية على تصدّر نتائج البحث المحلي وجذب عملاء حقيقيين —

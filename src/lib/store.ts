@@ -1,10 +1,21 @@
-import { DEFAULT_SETTINGS, SERVICES, type Service, type SiteSettings } from "./siteData";
+import { type Service, type SiteSettings } from "./siteData";
 import type { Auth, User } from "firebase/auth";
+import {
+  readDocument,
+  runCollectionQuery,
+  createDocumentWithFields,
+  generateDocumentId,
+} from "./firebaseRest";
+import { cacheGet, cacheSet, cacheDelete } from "./cache";
 
 // ---------------------------------------------------------------------------
-// Firebase is loaded lazily via dynamic import() so the public marketing pages
-// never pay the ~160 kB (gzip) Firebase bundle cost on first paint. Every
-// function below pulls in the SDK only when it is actually needed.
+// Public marketing reads (site_settings, service_overrides) and public writes
+// (visits, contact_requests) go through the lightweight Firestore REST client
+// in ./firebaseRest with a small TTL cache — the ~700 kB Firebase JS SDK is
+// never shipped to public pages anymore.
+//
+// The Firebase SDK is still loaded lazily via dynamic import() — but only by
+// the authenticated dashboard flows (admin auth + admin CRUD) below.
 // ---------------------------------------------------------------------------
 
 let cachedAuth: Auth | null = null;
@@ -83,15 +94,27 @@ export const ALLOWED_EMAILS: string[] = (import.meta.env.VITE_ADMIN_EMAILS || "a
   .map((email) => email.trim().toLowerCase())
   .filter(Boolean);
 
+const SETTINGS_CACHE_KEY = "settings:default";
+const SERVICES_CACHE_KEY = "service_overrides";
+
+async function loadSiteData(): Promise<typeof import("./siteData")> {
+  return import("./siteData");
+}
+
 // ---------- Settings ----------
 export async function getSiteSettings(): Promise<SiteSettings> {
+  const cached = cacheGet<Partial<SiteSettings>>(SETTINGS_CACHE_KEY);
+  if (cached && typeof cached === "object") {
+    const { DEFAULT_SETTINGS } = await loadSiteData();
+    return { ...DEFAULT_SETTINGS, ...cached };
+  }
   try {
-    const [{ db }, { doc, getDoc }] = await Promise.all([getFirebase(), getFirestoreApi()]);
-    const docRef = doc(db, "site_settings", "default");
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      return { ...DEFAULT_SETTINGS, ...(data.data || {}) };
+    const doc = await readDocument(["site_settings", "default"]);
+    const data = (doc?.data ?? doc) as Partial<SiteSettings> | null;
+    if (data && typeof data === "object") {
+      cacheSet(SETTINGS_CACHE_KEY, data);
+      const { DEFAULT_SETTINGS } = await loadSiteData();
+      return { ...DEFAULT_SETTINGS, ...data };
     }
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
@@ -99,6 +122,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
       console.warn("Using default site settings fallback:", msg);
     }
   }
+  const { DEFAULT_SETTINGS } = await loadSiteData();
   return DEFAULT_SETTINGS;
 }
 
@@ -108,6 +132,7 @@ export async function saveSiteSettings(settings: SiteSettings): Promise<void> {
     const [{ db }, { doc, setDoc }] = await Promise.all([getFirebase(), getFirestoreApi()]);
     const docRef = doc(db, "site_settings", "default");
     await setDoc(docRef, { data: settings }, { merge: true });
+    cacheDelete(SETTINGS_CACHE_KEY);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
@@ -117,21 +142,31 @@ export async function saveSiteSettings(settings: SiteSettings): Promise<void> {
 type ServiceOverride = Partial<Pick<Service, "featured" | "visible" | "order" | "title" | "short" | "description">>;
 
 export async function getServices(): Promise<Service[]> {
+  const cached = cacheGet<Record<string, ServiceOverride>>(SERVICES_CACHE_KEY);
+  const { SERVICES } = await loadSiteData();
+  if (cached && typeof cached === "object") {
+    return mergeServices(SERVICES, cached);
+  }
+  let overrides: Record<string, ServiceOverride> = {};
   try {
-    const [{ db }, { collection, getDocs }] = await Promise.all([getFirebase(), getFirestoreApi()]);
-    const querySnapshot = await getDocs(collection(db, "service_overrides"));
-    const overrides: Record<string, ServiceOverride> = {};
-    querySnapshot.forEach((docSnap) => {
-      overrides[docSnap.id] = docSnap.data().data as ServiceOverride;
-    });
-    return SERVICES.map((s) => ({ ...s, ...(overrides[s.id] || {}) })).sort((a, b) => a.order - b.order);
+    const docs = await runCollectionQuery("service_overrides");
+    overrides = {};
+    for (const doc of docs) {
+      const payload = (doc.data.data ?? doc.data) as ServiceOverride | undefined;
+      if (doc.id && payload && typeof payload === "object") overrides[doc.id] = payload;
+    }
+    cacheSet(SERVICES_CACHE_KEY, overrides);
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     if (!msg.includes("client is offline") && !msg.includes("unavailable")) {
       console.warn("Using default services fallback:", msg);
     }
-    return [...SERVICES].sort((a, b) => a.order - b.order);
   }
+  return mergeServices(SERVICES, overrides);
+}
+
+function mergeServices(SERVICES: Service[], overrides: Record<string, ServiceOverride>): Service[] {
+  return SERVICES.map((s) => ({ ...s, ...(overrides[s.id] || {}) })).sort((a, b) => a.order - b.order);
 }
 
 export async function getServiceById(id: string): Promise<Service | undefined> {
@@ -148,6 +183,7 @@ export async function updateService(id: string, patch: ServiceOverride): Promise
     const existing = docSnap.exists() ? (docSnap.data().data || {}) : {};
     const merged = { ...existing, ...patch };
     await setDoc(docRef, { data: merged }, { merge: true });
+    cacheDelete(SERVICES_CACHE_KEY);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
@@ -198,15 +234,14 @@ export async function getRequests(): Promise<ContactRequest[]> {
  * error state instead of a false success message.
  */
 export async function addRequest(data: Omit<ContactRequest, "id" | "status" | "created_date">): Promise<void> {
-  const [{ db }, { collection, doc, setDoc }] = await Promise.all([getFirebase(), getFirestoreApi()]);
-  const newId = doc(collection(db, "contact_requests")).id;
-  const newRequest = {
+  const newId = generateDocumentId();
+  const newRequest: ContactRequest = {
     ...data,
     id: newId,
-    status: "new" as const,
+    status: "new",
     created_date: new Date().toISOString()
   };
-  await setDoc(doc(db, "contact_requests", newId), newRequest);
+  await createDocumentWithFields("contact_requests", newId, newRequest as unknown as Record<string, unknown>);
 }
 
 export async function updateRequestStatus(id: string, status: ContactRequest["status"]): Promise<void> {
@@ -251,19 +286,14 @@ export function getVisitorId(): string {
 }
 
 async function persistVisit(page: string): Promise<void> {
-  try {
-    const [{ db }, { collection, doc, setDoc }] = await Promise.all([getFirebase(), getFirestoreApi()]);
-    const newId = doc(collection(db, "visits")).id;
-    const newVisit: Visit = {
-      page,
-      visitor_id: getVisitorId(),
-      referrer: document.referrer || "",
-      created_date: new Date().toISOString()
-    };
-    await setDoc(doc(db, "visits", newId), newVisit);
-  } catch (error) {
-    console.warn("Failed to track visit:", error);
-  }
+  const newVisit: Visit = {
+    page,
+    visitor_id: getVisitorId(),
+    referrer: document.referrer || "",
+    created_date: new Date().toISOString()
+  };
+  const newId = generateDocumentId();
+  await createDocumentWithFields("visits", newId, newVisit as unknown as Record<string, unknown>);
 }
 
 /**

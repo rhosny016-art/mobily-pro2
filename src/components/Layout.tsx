@@ -1,10 +1,11 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
-import ChatWidget from "./ChatWidget";
-import BackToTop from "./BackToTop";
 import { trackVisit } from "@/lib/store";
+
+const ChatWidget = lazy(() => import("./ChatWidget"));
+const BackToTop = lazy(() => import("./BackToTop"));
 
 export default function Layout() {
   const { pathname } = useLocation();
@@ -26,8 +27,10 @@ export default function Layout() {
         <Outlet />
       </main>
       <Footer />
-      <ChatWidget />
-      <BackToTop />
+      <Suspense fallback={null}>
+        <ChatWidget />
+        <BackToTop />
+      </Suspense>
     </div>
   );
 }
