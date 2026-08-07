@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { CheckCircle2, Loader2, Send } from "lucide-react";
 import { addRequest } from "@/lib/store";
+import { validateContactRequest, type ContactFormErrors } from "@/lib/contactValidation";
 
 const inputCls =
   "w-full rounded-xl border border-border bg-white px-4 py-3 text-sm outline-none transition focus:ring-2 focus:ring-primary/50 focus:border-primary";
@@ -10,7 +11,7 @@ export default function ContactForm({ defaultSubject = "" }: { defaultSubject?: 
   const [form, setForm] = useState({ name: "", email: "", phone: "", subject: defaultSubject, message: "" });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<ContactFormErrors>({});
   // Honeypot field — hidden from real users, bots fill it in.
   const [company, setCompany] = useState("");
 
@@ -28,23 +29,7 @@ export default function ContactForm({ defaultSubject = "" }: { defaultSubject?: 
   const [error, setError] = useState("");
 
   const validate = () => {
-    const newErrors: Record<string, string> = {};
-    if (form.name.trim().length < 3) {
-      newErrors.name = "يجب أن يكون الاسم 3 أحرف على الأقل";
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(form.email.trim())) {
-      newErrors.email = "يرجى إدخال بريد إلكتروني صحيح (مثال: you@example.com)";
-    }
-    if (form.phone.trim()) {
-      const phoneRegex = /^[\d+-\s()]{8,15}$/;
-      if (!phoneRegex.test(form.phone.trim())) {
-        newErrors.phone = "يرجى إدخال رقم هاتف صحيح (8 إلى 15 رقماً)";
-      }
-    }
-    if (form.message.trim().length < 10) {
-      newErrors.message = "يجب أن تحتوي الرسالة على 10 أحرف على الأقل";
-    }
+    const newErrors = validateContactRequest(form);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };

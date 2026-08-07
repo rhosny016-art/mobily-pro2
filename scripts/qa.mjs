@@ -49,6 +49,8 @@ async function run() {
   await page.waitForTimeout(500);
   const errText = await page.locator("#contact").innerText();
   ok("services: form validates input", errText.includes("يرجى تصحيح") || errText.includes("3 أحرف"), errText.slice(0, 120));
+  ok("services: invalid feedback is announced", (await page.locator('#contact [role="alert"]').count()) > 0);
+  ok("services: invalid name describes its error", Boolean(await page.locator('#contact input[name="name"]').getAttribute("aria-describedby")));
   await page.fill('#contact input[placeholder="اسمك الكامل"]', "اختبار جودة");
   await page.click('#contact button[type="submit"]');
   await page.waitForTimeout(2500);

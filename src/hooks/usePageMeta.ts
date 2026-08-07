@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { siteUrl, SOCIAL_IMAGE, SITE_NAME } from "@/lib/config";
+import { absoluteSiteUrl, SOCIAL_IMAGE, SITE_NAME } from "@/lib/config";
 
 interface PageMeta {
   title: string;
@@ -61,9 +61,9 @@ export function usePageMeta({
   noindex = false,
 }: PageMeta) {
   useEffect(() => {
-    const url = siteUrl(path);
+    const url = absoluteSiteUrl(path);
     const fullTitle = path === "/" ? title : `${title} | ${SITE_NAME}`;
-    const ogImage = siteUrl(image);
+    const ogImage = absoluteSiteUrl(image);
 
     document.title = fullTitle;
     upsertMeta('meta[name="description"]', "name", "description", description);

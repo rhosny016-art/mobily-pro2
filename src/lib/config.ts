@@ -1,16 +1,23 @@
-// Central site configuration.
-// SITE_URL is used as the base for canonical URLs and social sharing.
-// At runtime it resolves to the real deployment origin so canonical tags
-// always match the domain visitors are on (dev, preview, or production).
-
-export function siteUrl(path = "/"): string {
-  const base =
-    typeof window !== "undefined"
-      ? window.location.origin
-      : "https://dalni.agency";
-  const cleanPath = path.startsWith("/") ? path : `/${path}`;
-  return `${base}${cleanPath}`;
+// Central site configuration. Canonical and social URLs deliberately use the
+// production origin so preview deployments never compete with the live site.
+export function normalizeSiteOrigin(origin: string): string {
+  return origin.replace(/\/+$/, "");
 }
+
+const configuredSiteOrigin =
+  typeof import.meta.env !== "undefined" ? import.meta.env.VITE_SITE_URL : undefined;
+
+export const SITE_ORIGIN = normalizeSiteOrigin(
+  configuredSiteOrigin || "https://dalni-agency.vercel.app",
+);
+
+export function absoluteSiteUrl(path = "/", origin = SITE_ORIGIN): string {
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  return `${normalizeSiteOrigin(origin)}${cleanPath}`;
+}
+
+/** @deprecated Use absoluteSiteUrl for new metadata code. */
+export const siteUrl = absoluteSiteUrl;
 
 export const SITE_NAME = "دلّني";
 
