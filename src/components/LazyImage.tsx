@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 
 interface LazyImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   src: string;
@@ -55,46 +54,48 @@ export default function LazyImage({
 
   return (
     <div className={wrapperClassName} ref={imgRef}>
-      {/* Skeleton Shimmer Placeholder */}
-      <AnimatePresence>
-        {!isLoaded && !hasError && (
-          <motion.div
-            className="absolute inset-0 bg-gradient-to-r from-slate-100 via-slate-200 to-slate-100 z-10"
-            animate={{
-              backgroundPosition: ["200% 0", "-200% 0"],
-            }}
-            transition={{
-              duration: 1.5,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-            style={{
-              backgroundSize: "200% 100%",
-            }}
-            exit={{ opacity: 0 }}
-          />
-        )}
-      </AnimatePresence>
+      {/* Skeleton shimmer placeholder implemented with CSS to avoid framer-motion */}
+      {!isLoaded && !hasError && <div className="absolute inset-0 z-10 shimmer bg-gradient-to-r from-slate-100 via-slate-200 to-slate-100" style={{ backgroundSize: "200% 100%" }} />}
 
-      {/* Actual Image */}
+      {/* Actual Image — prefer AVIF/WebP variants when available under /_optimized */}
       {isInView && (
-        <img
-          src={currentSrc}
-          alt={alt}
-          onLoad={() => setIsLoaded(true)}
-          onError={(e) => {
-            setHasError(true);
-            setIsLoaded(true);
-            if (onError) onError(e);
-          }}
-          className={`${className} transition-opacity duration-500 ${
-            isLoaded ? "opacity-100" : "opacity-0"
-          }`}
-          loading="lazy"
-          decoding="async"
-          referrerPolicy="no-referrer"
-          {...props}
-        />
+        <picture>
+          {/** AVIF source */}
+          <source
+            type="image/avif"
+            srcSet={(() => {
+              try {
+                const base = src.replace(/\.[^/.]+$/, "");
+                return [360,640,960,1280,1920].map(s => `/ _optimized/${base.split('/').pop()}-${s}.avif`.replace('/ _optimized','/_optimized')).join(', ');
+              } catch { return undefined; }
+            })()}
+          />
+          {/** WebP source */}
+          <source
+            type="image/webp"
+            srcSet={(() => {
+              try {
+                const base = src.replace(/\.[^/.]+$/, "");
+                return [360,640,960,1280,1920].map(s => `/ _optimized/${base.split('/').pop()}-${s}.webp`.replace('/ _optimized','/_optimized')).join(', ');
+              } catch { return undefined; }
+            })()}
+          />
+          <img
+            src={currentSrc}
+            alt={alt}
+            onLoad={() => setIsLoaded(true)}
+            onError={(e) => {
+              setHasError(true);
+              setIsLoaded(true);
+              if (onError) onError(e);
+            }}
+            className={`${className} transition-opacity duration-500 ${isLoaded ? "opacity-100" : "opacity-0"}`}
+            loading="lazy"
+            decoding="async"
+            referrerPolicy="no-referrer"
+            {...props}
+          />
+        </picture>
       )}
     </div>
   );

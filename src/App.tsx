@@ -1,10 +1,10 @@
-import { useEffect, lazy, Suspense } from "react";
-import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";import { MotionConfig } from "framer-motion";
+import { useEffect, lazy, Suspense, useState } from "react";
+import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import Layout from "@/components/Layout";
 import LoadingFallback from "@/components/LoadingFallback";
-import ScrollProgress from "@/components/ui/ScrollProgress";
-import CursorGlow from "@/components/ui/CursorGlow";
-import Preloader from "@/components/ui/Preloader";
+
+// Defer decorative / motion-heavy client code so initial bundle stays small.
+const ClientDecorations = lazy(() => import("@/components/ClientDecorations"));
 
 // Lazy-load client pages
 const Home = lazy(() => import("@/pages/Home"));
@@ -29,14 +29,28 @@ function ScrollToTop() {
 }
 
 export default function App() {
+  const [showDecor, setShowDecor] = useState(false);
+
+  useEffect(() => {
+    // Defer loading heavy decorative client code until the browser is idle
+    // or after a short delay so it never blocks initial render.
+    const w = window as Window & { requestIdleCallback?: (cb: () => void, opts?: any) => number };
+    if (typeof w.requestIdleCallback === "function") {
+      const id = w.requestIdleCallback(() => setShowDecor(true), { timeout: 200 });
+      return () => w.cancelIdleCallback?.(id as number);
+    }
+    const t = setTimeout(() => setShowDecor(true), 200);
+    return () => clearTimeout(t);
+  }, []);
   return (
-    <MotionConfig reducedMotion="user">
-      <BrowserRouter>
-        <Preloader />
-        <ScrollProgress />
-        <CursorGlow />
-        <ScrollToTop />
-        <Suspense fallback={<LoadingFallback />}>
+    <BrowserRouter>
+      {showDecor && (
+        <Suspense fallback={null}>
+          <ClientDecorations />
+        </Suspense>
+      )}
+      <ScrollToTop />
+      <Suspense fallback={<LoadingFallback />}>
           <Routes>
             <Route element={<Layout />}>
               <Route path="/" element={<Home />} />
@@ -54,6 +68,5 @@ export default function App() {
           </Routes>
         </Suspense>
       </BrowserRouter>
-    </MotionConfig>
   );
 }

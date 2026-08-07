@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X, PhoneCall, MapPin, Clock } from "lucide-react";
 import Logo from "./Logo";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
@@ -81,12 +80,7 @@ export default function Navbar() {
   };
 
   return (
-    <motion.header
-      initial={{ opacity: 0, y: -24 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.7, ease: EASE_OUT_EXPO }}
-      className="fixed top-0 inset-x-0 z-50 px-3 sm:px-5 pt-3 sm:pt-4 pointer-events-none"
-    >
+    <header className="fixed top-0 inset-x-0 z-50 px-3 sm:px-5 pt-3 sm:pt-4 pointer-events-none transition-transform duration-500 ease-out">
       <div
         className={cn(
           "pointer-events-auto mx-auto w-full max-w-6xl rounded-full border transition-all duration-300",
@@ -102,7 +96,7 @@ export default function Navbar() {
 
           {/* Desktop links */}
           <nav className="hidden lg:flex items-center gap-0.5" aria-label="التنقل الرئيسي">
-            {(isHome ? SECTION_LINKS : PAGE_LINKS).map((l) => {
+              {(isHome ? SECTION_LINKS : PAGE_LINKS).map((l) => {
               const isActive = "id" in l ? l.id === activeSection : pathname === l.to;
               const inner = (
                 <span
@@ -111,13 +105,7 @@ export default function Navbar() {
                     isActive ? "text-brass-300" : "text-slate-300/90 hover:text-white"
                   )}
                 >
-                  {isActive && (
-                    <motion.span
-                      layoutId="nav-pill"
-                      transition={{ duration: 0.45, ease: EASE_OUT_EXPO }}
-                      className="absolute inset-0 rounded-full bg-white/8 border border-white/10"
-                    />
-                  )}
+                  {isActive && <span className="absolute inset-0 rounded-full bg-white/8 border border-white/10" />}
                   <span className="relative z-10">{l.label}</span>
                 </span>
               );
@@ -163,53 +151,15 @@ export default function Navbar() {
             aria-label={open ? "إغلاق القائمة" : "فتح القائمة"}
             aria-expanded={open}
           >
-            <AnimatePresence mode="wait" initial={false}>
-              {open ? (
-                <motion.span
-                  key="close"
-                  initial={{ rotate: -90, opacity: 0 }}
-                  animate={{ rotate: 0, opacity: 1 }}
-                  exit={{ rotate: 90, opacity: 0 }}
-                  transition={{ duration: 0.16 }}
-                  className="flex"
-                >
-                  <X className="w-5 h-5" aria-hidden="true" />
-                </motion.span>
-              ) : (
-                <motion.span
-                  key="menu"
-                  initial={{ rotate: 90, opacity: 0 }}
-                  animate={{ rotate: 0, opacity: 1 }}
-                  exit={{ rotate: -90, opacity: 0 }}
-                  transition={{ duration: 0.16 }}
-                  className="flex"
-                >
-                  <Menu className="w-5 h-5" aria-hidden="true" />
-                </motion.span>
-              )}
-            </AnimatePresence>
+            {open ? <span className="flex"><X className="w-5 h-5" aria-hidden="true" /></span> : <span className="flex"><Menu className="w-5 h-5" aria-hidden="true" /></span>}
           </button>
         </div>
       </div>
-
       {/* Mobile drawer */}
-      <AnimatePresence>
-        {open && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setOpen(false)}
-              className="fixed inset-0 z-40 bg-night-950/70 backdrop-blur-sm lg:hidden pointer-events-auto"
-            />
-            <motion.div
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 30, stiffness: 240 }}
-              className="fixed top-0 right-0 z-50 flex h-dvh w-[86vw] max-w-[340px] flex-col bg-night-900 border-l border-white/8 lg:hidden pointer-events-auto overflow-hidden"
-            >
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} className="fixed inset-0 z-40 bg-night-950/70 backdrop-blur-sm lg:hidden pointer-events-auto transition-opacity" />
+          <div className="fixed top-0 right-0 z-50 flex h-dvh w-[86vw] max-w-[340px] flex-col bg-night-900 border-l border-white/8 lg:hidden pointer-events-auto overflow-hidden transform translate-x-0 transition-transform duration-400">
               <div className="absolute -top-24 -left-16 w-56 h-56 rounded-full bg-brass-500/12 blur-[100px] pointer-events-none" />
               <div className="flex items-center justify-between px-5 py-4 border-b border-white/8 relative">
                 <Logo animated={false} light size={30} />
@@ -247,10 +197,9 @@ export default function Navbar() {
                       />
                     </motion.a>
                   ) : (
-                    <motion.div
-                      key={(l as { to: string }).to}
-                      initial={{ opacity: 0, x: 28 }}
-                      animate={{ opacity: 1, x: 0 }}
+                  </div>
+                </>
+              )}
                       transition={{ delay: 0.05 + i * 0.05, duration: 0.35, ease: EASE_OUT_EXPO }}
                     >
                       <Link

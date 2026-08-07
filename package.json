@@ -7,6 +7,7 @@
     "dev": "tsx server.ts",
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "start": "node dist/server.cjs",
+    "optimize:images": "node scripts/optimize-images.js",
     "og": "node scripts/generate-og.mjs",
     "typecheck": "tsc --noEmit"
   },
@@ -33,6 +34,9 @@
     "tailwindcss": "4.1.17",
     "tsx": "^4.23.1",
     "typescript": "5.9.3",
-    "vite": "7.3.2"
+    "vite": "7.3.2",
+    "sharp": "^0.32.0",
+    "vite-imagetools": "^5.3.0",
+    "vite-plugin-compression": "^1.6.0"
   }
 }

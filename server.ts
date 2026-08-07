@@ -68,8 +68,10 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+    // Serve immutable assets with long cache and index.html as no-cache
+    app.use(express.static(distPath, { maxAge: 31536000000 })); // 1 year
     app.get('*all', (_req, res) => {
+      res.setHeader('Cache-Control', 'no-cache');
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }

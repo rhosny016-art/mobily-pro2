@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
@@ -9,6 +9,29 @@ const BackToTop = lazy(() => import("./BackToTop"));
 
 export default function Layout() {
   const { pathname } = useLocation();
+
+  const [loadChat, setLoadChat] = useState(false);
+
+  useEffect(() => {
+    // Load chat widget during idle time, but immediately if an external
+    // request to open chat is dispatched (ensures click-to-open works).
+    const w = window as Window & { requestIdleCallback?: (cb: () => void, opts?: any) => number };
+    const onOpen = () => setLoadChat(true);
+    window.addEventListener("dalni:open-chat", onOpen);
+
+    if (typeof w.requestIdleCallback === "function") {
+      const id = w.requestIdleCallback(() => setLoadChat(true), { timeout: 3000 });
+      return () => {
+        window.removeEventListener("dalni:open-chat", onOpen);
+        (w as any).cancelIdleCallback?.(id);
+      };
+    }
+    const t = setTimeout(() => setLoadChat(true), 2000);
+    return () => {
+      window.removeEventListener("dalni:open-chat", onOpen);
+      clearTimeout(t);
+    };
+  }, []);
 
   useEffect(() => {
     trackVisit(pathname);
@@ -28,7 +51,7 @@ export default function Layout() {
       </main>
       <Footer />
       <Suspense fallback={null}>
-        <ChatWidget />
+        {loadChat ? <ChatWidget /> : null}
         <BackToTop />
       </Suspense>
     </div>
