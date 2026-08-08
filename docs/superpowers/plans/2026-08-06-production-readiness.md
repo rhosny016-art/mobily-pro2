@@ -33,7 +33,7 @@
 **Files:** `src/lib/config.ts`, `src/hooks/usePageMeta.ts`, `index.html`, `public/robots.txt`, `public/sitemap.xml`, `.env.example`, `src/hooks/usePageMeta.test.ts`
 
 - [ ] Write a failing test that verifies canonical paths use the configured production origin, not `window.location.origin`.
-- [ ] Use `import.meta.env.VITE_SITE_URL` with `https://dalni-agency.vercel.app` as the documented fallback.
+- [ ] Use `import.meta.env.VITE_SITE_URL` with `https://dalni.agency` as the documented fallback.
 - [ ] Update static canonical/Open Graph/Twitter URLs, `Sitemap:`, and XML locations to the same origin.
 - [ ] Document `VITE_SITE_URL` in `.env.example`.
 - [ ] Run `npm run test && npm run typecheck && npm run build`.

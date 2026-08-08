@@ -1,5 +1,6 @@
-import { motion } from "framer-motion";
-import { fadeUp, staggerContainer, EASE_OUT_EXPO } from "@/lib/motion";
+import type { CSSProperties } from "react";
+import { useInView } from "@/hooks/useInView";
+import { cn } from "@/utils/cn";
 
 interface Props {
   id?: string;
@@ -12,15 +13,18 @@ interface Props {
 }
 
 export default function SectionHeading({ id, eyebrow, title, subtitle, light = false, center = true, index }: Props) {
+  const { ref, inView } = useInView<HTMLDivElement>({ amount: 0.35 });
+
   return (
-    <div id={id} className={`max-w-3xl ${center ? "mx-auto text-center" : ""} mb-12 md:mb-16`}>
+    <div ref={ref} id={id} className={`max-w-3xl ${center ? "mx-auto text-center" : ""} mb-12 md:mb-16`}>
       {index && (
-        <motion.div
-          initial={{ opacity: 0, x: 12 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true, amount: 0.4 }}
-          transition={{ duration: 0.6, ease: EASE_OUT_EXPO }}
-          className={`flex items-center gap-3 mb-4 ${center ? "justify-center" : "justify-start"}`}
+        <div
+          className={cn(
+            "reveal flex items-center gap-3 mb-4",
+            center ? "justify-center" : "justify-start",
+            inView && "reveal-in-view"
+          )}
+          style={{ "--reveal-x": "12px", "--reveal-y": "0px", "--reveal-blur": "0px" } as CSSProperties}
         >
           <span
             dir="ltr"
@@ -29,19 +33,13 @@ export default function SectionHeading({ id, eyebrow, title, subtitle, light = f
             {index}
           </span>
           <span className="h-px w-12 bg-gradient-to-l from-brass-500/60 to-transparent" aria-hidden="true" />
-        </motion.div>
+        </div>
       )}
 
-      <motion.div
-        variants={staggerContainer}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.35 }}
-      >
+      <div className={cn("reveal-stagger", inView && "in-view")}>
         {eyebrow && (
-          <motion.span
-            variants={fadeUp}
-            custom={0}
+          <span
+            style={{ "--stagger-delay": "0.05s" } as CSSProperties}
             className={`inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full text-[13px] font-bold mb-5 ${
               light
                 ? "glass-dark text-brass-300"
@@ -53,31 +51,29 @@ export default function SectionHeading({ id, eyebrow, title, subtitle, light = f
             <svg className="w-4 h-4 text-brass-500/60" viewBox="0 0 20 8" fill="none" aria-hidden="true">
               <path d="M1 4C6 1.5 14 1.5 19 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeDasharray="3 3" />
             </svg>
-          </motion.span>
+          </span>
         )}
 
-        <motion.h2
-          variants={fadeUp}
-          custom={1}
+        <h2
+          style={{ "--stagger-delay": "0.15s" } as CSSProperties}
           className={`text-3xl md:text-[42px] font-black leading-[1.2] tracking-tight ${
             light ? "text-white" : "text-night-900"
           }`}
         >
           {title}
-        </motion.h2>
+        </h2>
 
         {subtitle && (
-          <motion.p
-            variants={fadeUp}
-            custom={2}
+          <p
+            style={{ "--stagger-delay": "0.25s" } as CSSProperties}
             className={`mt-4 text-base md:text-lg leading-relaxed font-medium ${
               light ? "text-slate-300/80" : "text-muted-foreground"
             }`}
           >
             {subtitle}
-          </motion.p>
+          </p>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }

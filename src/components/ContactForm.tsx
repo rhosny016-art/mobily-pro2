@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Loader2, Send } from "lucide-react";
 import { addRequest } from "@/lib/store";
 
@@ -11,8 +10,19 @@ export default function ContactForm({ defaultSubject = "" }: { defaultSubject?: 
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [error, setError] = useState("");
+  const successRef = useRef<HTMLHeadingElement>(null);
+  const errorSummaryRef = useRef<HTMLDivElement>(null);
   // Honeypot field — hidden from real users, bots fill it in.
   const [company, setCompany] = useState("");
+
+  useEffect(() => {
+    if (success) successRef.current?.focus();
+  }, [success]);
+
+  useEffect(() => {
+    if (error) errorSummaryRef.current?.focus();
+  }, [error]);
 
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -24,8 +34,6 @@ export default function ContactForm({ defaultSubject = "" }: { defaultSubject?: 
       });
     }
   };
-
-  const [error, setError] = useState("");
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
@@ -74,13 +82,9 @@ export default function ContactForm({ defaultSubject = "" }: { defaultSubject?: 
 
   if (success) {
     return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="bg-white rounded-2xl border border-border p-10 text-center"
-      >
+      <div role="status" className="scale-pop bg-white rounded-2xl border border-border p-10 text-center">
         <CheckCircle2 className="w-16 h-16 text-secondary mx-auto mb-4" aria-hidden="true" />
-        <h3 className="text-2xl font-extrabold mb-2">تم إرسال طلبك بنجاح!</h3>
+        <h3 ref={successRef} tabIndex={-1} className="text-2xl font-extrabold mb-2 outline-none">تم إرسال طلبك بنجاح!</h3>
         <p className="text-muted-foreground mb-6">سنتواصل معك في أقرب وقت ممكن.</p>
         <button
           onClick={() => {
@@ -92,7 +96,7 @@ export default function ContactForm({ defaultSubject = "" }: { defaultSubject?: 
         >
           إرسال طلب آخر
         </button>
-      </motion.div>
+      </div>
     );
   }
 
@@ -113,34 +117,75 @@ export default function ContactForm({ defaultSubject = "" }: { defaultSubject?: 
       </div>
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-bold mb-1.5">الاسم *</label>
-          <input required value={form.name} onChange={set("name")} className={`${inputCls} ${errors.name ? "border-destructive focus:ring-destructive/50" : ""}`} placeholder="اسمك الكامل" />
-          {errors.name && <p className="text-xs text-destructive mt-1 font-semibold">{errors.name}</p>}
+          <label htmlFor="cf-name" className="block text-sm font-bold mb-1.5">الاسم *</label>
+          <input
+            id="cf-name"
+            required
+            value={form.name}
+            onChange={set("name")}
+            aria-invalid={!!errors.name}
+            aria-describedby={errors.name ? "cf-name-error" : undefined}
+            className={`${inputCls} ${errors.name ? "border-destructive focus:ring-destructive/50" : ""}`}
+            placeholder="اسمك الكامل"
+          />
+          {errors.name && <p id="cf-name-error" className="text-xs text-destructive mt-1 font-semibold">{errors.name}</p>}
         </div>
         <div>
-          <label className="block text-sm font-bold mb-1.5">البريد الإلكتروني *</label>
-          <input required type="email" value={form.email} onChange={set("email")} className={`${inputCls} ${errors.email ? "border-destructive focus:ring-destructive/50" : ""}`} placeholder="you@example.com" dir="ltr" />
-          {errors.email && <p className="text-xs text-destructive mt-1 font-semibold">{errors.email}</p>}
+          <label htmlFor="cf-email" className="block text-sm font-bold mb-1.5">البريد الإلكتروني *</label>
+          <input
+            id="cf-email"
+            required
+            type="email"
+            value={form.email}
+            onChange={set("email")}
+            aria-invalid={!!errors.email}
+            aria-describedby={errors.email ? "cf-email-error" : undefined}
+            className={`${inputCls} ${errors.email ? "border-destructive focus:ring-destructive/50" : ""}`}
+            placeholder="you@example.com"
+            dir="ltr"
+          />
+          {errors.email && <p id="cf-email-error" className="text-xs text-destructive mt-1 font-semibold">{errors.email}</p>}
         </div>
       </div>
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-bold mb-1.5">رقم الهاتف</label>
-          <input value={form.phone} onChange={set("phone")} className={`${inputCls} ${errors.phone ? "border-destructive focus:ring-destructive/50" : ""}`} placeholder="01xxxxxxxxx" dir="ltr" />
-          {errors.phone && <p className="text-xs text-destructive mt-1 font-semibold">{errors.phone}</p>}
+          <label htmlFor="cf-phone" className="block text-sm font-bold mb-1.5">رقم الهاتف</label>
+          <input
+            id="cf-phone"
+            value={form.phone}
+            onChange={set("phone")}
+            aria-invalid={!!errors.phone}
+            aria-describedby={errors.phone ? "cf-phone-error" : undefined}
+            className={`${inputCls} ${errors.phone ? "border-destructive focus:ring-destructive/50" : ""}`}
+            placeholder="01xxxxxxxxx"
+            dir="ltr"
+          />
+          {errors.phone && <p id="cf-phone-error" className="text-xs text-destructive mt-1 font-semibold">{errors.phone}</p>}
         </div>
         <div>
-          <label className="block text-sm font-bold mb-1.5">الموضوع</label>
-          <input value={form.subject} onChange={set("subject")} className={inputCls} placeholder="موضوع الرسالة" />
+          <label htmlFor="cf-subject" className="block text-sm font-bold mb-1.5">الموضوع</label>
+          <input id="cf-subject" value={form.subject} onChange={set("subject")} className={inputCls} placeholder="موضوع الرسالة" />
         </div>
       </div>
       <div>
-        <label className="block text-sm font-bold mb-1.5">الرسالة *</label>
-        <textarea required rows={4} value={form.message} onChange={set("message")} className={`${inputCls} ${errors.message ? "border-destructive focus:ring-destructive/50" : ""}`} placeholder="اكتب رسالتك هنا..." />
-        {errors.message && <p className="text-xs text-destructive mt-1 font-semibold">{errors.message}</p>}
+        <label htmlFor="cf-message" className="block text-sm font-bold mb-1.5">الرسالة *</label>
+        <textarea
+          id="cf-message"
+          required
+          rows={4}
+          value={form.message}
+          onChange={set("message")}
+          aria-invalid={!!errors.message}
+          aria-describedby={errors.message ? "cf-message-error" : undefined}
+          className={`${inputCls} ${errors.message ? "border-destructive focus:ring-destructive/50" : ""}`}
+          placeholder="اكتب رسالتك هنا..."
+        />
+        {errors.message && <p id="cf-message-error" className="text-xs text-destructive mt-1 font-semibold">{errors.message}</p>}
       </div>
       {error && (
-        <div className="bg-destructive/10 text-destructive text-sm font-semibold rounded-xl p-3">{error}</div>
+        <div ref={errorSummaryRef} tabIndex={-1} role="alert" className="bg-destructive/10 text-destructive text-sm font-semibold rounded-xl p-3 outline-none">
+          {error}
+        </div>
       )}
       <button
         type="submit"

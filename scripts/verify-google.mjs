@@ -9,7 +9,7 @@
  *   node scripts/verify-google.mjs
  *   BASE_URL=https://my-domain.com node scripts/verify-google.mjs
  */
-const base = process.env.BASE_URL || "https://dalni-agency.vercel.app";
+const base = process.env.BASE_URL || "https://dalni.agency";
 const file = "google44d8479bff491630.html";
 const expected = "google-site-verification: google44d8479bff491630.html";
 const url = `${base}/${file}`;

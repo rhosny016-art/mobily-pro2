@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import { X, MapPin, Globe2, ArrowLeft, Radio } from "lucide-react";
 import SectionHeading from "@/components/SectionHeading";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
+import { prefersReducedMotion } from "@/lib/motion";
+import { cn } from "@/utils/cn";
 
 interface DigitalHub {
   id: string;
@@ -131,11 +132,40 @@ const DIGITAL_HUBS: DigitalHub[] = [
   },
 ];
 
+const PANEL_EXIT_MS = 220;
+
 export default function InteractiveAgencyMap() {
   const [selectedHub, setSelectedHub] = useState<DigitalHub | null>(null);
+  const [closing, setClosing] = useState(false);
+  const reduced = prefersReducedMotion();
+  const exitTimer = useRef<number | null>(null);
+  const closingRef = useRef(false);
+  const lastHubIdRef = useRef<string | null>(null);
+  const pinRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const centralHub = DIGITAL_HUBS.find((h) => h.isCentral) || DIGITAL_HUBS[0];
   const otherHubs = DIGITAL_HUBS.filter((h) => !h.isCentral);
+
+  useEffect(() => {
+    return () => {
+      if (exitTimer.current) window.clearTimeout(exitTimer.current);
+    };
+  }, []);
+
+  const closePanel = () => {
+    if (closingRef.current) return;
+    if (selectedHub) lastHubIdRef.current = selectedHub.id;
+    closingRef.current = true;
+    setClosing(true);
+    if (exitTimer.current) window.clearTimeout(exitTimer.current);
+    exitTimer.current = window.setTimeout(() => {
+      closingRef.current = false;
+      setSelectedHub(null);
+      setClosing(false);
+      const id = lastHubIdRef.current;
+      if (id) pinRefs.current[id]?.focus();
+    }, PANEL_EXIT_MS);
+  };
 
   return (
     <section id="network" aria-label="شبكة تغطية وكالة دلّني" className="relative scroll-mt-24 py-16 md:py-28 bg-night-950 text-white overflow-hidden border-t border-white/6">
@@ -213,36 +243,44 @@ export default function InteractiveAgencyMap() {
                 <path d="M 100,220 Q 130,190 170,200 Q 190,230 180,270 Q 160,310 135,320 Q 110,300 95,260 Q 90,240 100,220 Z" />
               </g>
 
-              {/* Arcs */}
+              {/* Arcs with traveling dots (SMIL, deterministic delays) */}
               {otherHubs.map((hub) => {
                 const midX = (centralHub.coords.x + hub.coords.x) / 2;
                 const midY = (centralHub.coords.y + hub.coords.y) / 2 - 24;
                 const d = `M ${centralHub.coords.x},${centralHub.coords.y} Q ${midX},${midY} ${hub.coords.x},${hub.coords.y}`;
+                const travelDelay = `${((hub.coords.x + hub.coords.y * 3) % 20) / 10}s`;
+                const cxValues = `${centralHub.coords.x};${midX};${hub.coords.x}`;
+                const cyValues = `${centralHub.coords.y};${midY};${hub.coords.y}`;
                 return (
                   <g key={`arc-${hub.id}`}>
                     <path d={d} fill="none" stroke="rgba(247,185,85,0.22)" strokeWidth="1.2" />
                     <path d={d} fill="none" stroke="url(#arcGrad)" strokeWidth="1.4" strokeLinecap="round" className="route-dash" filter="url(#softGlow)" />
-                    <motion.circle
-                      r="2.6"
-                      fill="#ffd98a"
-                      filter="url(#softGlow)"
-                      animate={{ cx: [centralHub.coords.x, midX, hub.coords.x], cy: [centralHub.coords.y, midY, hub.coords.y] }}
-                      transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut", delay: Math.random() * 2 }}
-                    />
+                    <circle r="2.6" fill="#ffd98a" filter="url(#softGlow)">
+                      {!reduced && (
+                        <>
+                          <animate attributeName="cx" values={cxValues} keyTimes="0;0.5;1" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" calcMode="spline" dur="3.2s" begin={travelDelay} repeatCount="indefinite" />
+                          <animate attributeName="cy" values={cyValues} keyTimes="0;0.5;1" keySplines="0.42 0 0.58 1;0.42 0 0.58 1" calcMode="spline" dur="3.2s" begin={travelDelay} repeatCount="indefinite" />
+                        </>
+                      )}
+                    </circle>
                   </g>
                 );
               })}
             </svg>
 
             {/* Central pin */}
-            <motion.button
+            <button
               type="button"
-              className="absolute z-30 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer"
+              className="absolute z-30 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer transition-transform duration-200 hover:scale-110 active:scale-95"
               style={{ left: `${(centralHub.coords.x / 800) * 100}%`, top: `${(centralHub.coords.y / 800) * 100}%` }}
-              onClick={() => setSelectedHub(centralHub)}
-              whileHover={{ scale: 1.12 }}
-              whileTap={{ scale: 0.94 }}
+              onClick={() => {
+                if (exitTimer.current) window.clearTimeout(exitTimer.current);
+                closingRef.current = false;
+                setClosing(false);
+                setSelectedHub(centralHub);
+              }}
               aria-label={`${centralHub.name} — ${centralHub.clients}`}
+              aria-pressed={selectedHub?.id === centralHub.id}
             >
               <span className="absolute w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-brass-400/30 animate-ping-ring pointer-events-none" />
               <span className="relative w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-gradient-to-b from-brass-400 via-brass-500 to-brass-600 flex items-center justify-center text-night-950 shadow-[0_0_26px_rgba(237,155,47,0.75)] border-2 border-brass-200">
@@ -251,7 +289,7 @@ export default function InteractiveAgencyMap() {
               <span className="mt-1.5 bg-night-900/90 border border-brass-500/40 text-brass-300 font-extrabold text-[10px] sm:text-xs px-2.5 py-0.5 rounded-lg shadow-lg whitespace-nowrap">
                 {centralHub.name}
               </span>
-            </motion.button>
+            </button>
 
             {/* City pins */}
             {otherHubs.map((hub) => {
@@ -266,12 +304,21 @@ export default function InteractiveAgencyMap() {
                 <button
                   key={`pin-${hub.id}`}
                   type="button"
+                  ref={(el) => {
+                    pinRefs.current[hub.id] = el;
+                  }}
                   className={`absolute z-20 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer group/pin ${
                     isSelected ? "z-30" : ""
                   }`}
                   style={{ left: `${(hub.coords.x / 800) * 100}%`, top: `${(hub.coords.y / 800) * 100}%` }}
-                  onClick={() => setSelectedHub(hub)}
+                  onClick={() => {
+                    if (exitTimer.current) window.clearTimeout(exitTimer.current);
+                    closingRef.current = false;
+                    setClosing(false);
+                    setSelectedHub(hub);
+                  }}
                   aria-label={`${hub.name} — ${hub.clients}`}
+                  aria-pressed={isSelected}
                 >
                   <span
                     className={`w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 rounded-full border transition-all duration-200 ${
@@ -311,57 +358,55 @@ export default function InteractiveAgencyMap() {
         </div>
 
         {/* Selected hub panel */}
-        <AnimatePresence>
-          {selectedHub && (
-            <motion.div
-              role="status"
-              aria-live="polite"
-              initial={{ opacity: 0, y: 24, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 24, scale: 0.97 }}
-              transition={{ duration: 0.35 }}
-              className="mt-6 mx-auto max-w-2xl rounded-3xl glass-dark p-6 sm:p-8 text-right"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-brass-400 to-brass-600 flex items-center justify-center text-night-950 shrink-0">
-                    <Globe2 className="w-5 h-5" aria-hidden="true" />
-                  </div>
-                  <div>
-                    <h4 className="text-base sm:text-lg font-extrabold text-white">
-                      {selectedHub.isCentral ? "المقر الرئيسي — " : ""}
-                      {selectedHub.name}
-                      <span className="text-slate-400 font-bold text-sm"> ({selectedHub.country})</span>
-                    </h4>
-                    <p className="text-xs font-bold text-brass-300 mt-0.5">{selectedHub.clients}</p>
-                  </div>
+        {selectedHub && (
+          <div
+            role="region"
+            aria-label="تفاصيل المركز المحدد"
+            className={cn(
+              "mt-6 mx-auto max-w-2xl rounded-3xl glass-dark p-6 sm:p-8 text-right",
+              closing ? "panel-out pointer-events-none" : "panel-in"
+            )}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-brass-400 to-brass-600 flex items-center justify-center text-night-950 shrink-0">
+                  <Globe2 className="w-5 h-5" aria-hidden="true" />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedHub(null)}
-                  className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition"
-                  aria-label="إغلاق التفاصيل"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <div>
+                  <h3 className="text-base sm:text-lg font-extrabold text-white">
+                    {selectedHub.name}
+                    {!selectedHub.isCentral && selectedHub.country !== selectedHub.name && (
+                      <span className="text-slate-400 font-bold text-sm"> ({selectedHub.country})</span>
+                    )}
+                  </h3>
+                  <p className="text-xs font-bold text-brass-300 mt-0.5">{selectedHub.clients}</p>
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={closePanel}
+                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition"
+                aria-label="إغلاق التفاصيل"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-              <p className="mt-4 text-sm text-slate-300 leading-relaxed">{selectedHub.details}</p>
+            <p className="mt-4 text-sm text-slate-300 leading-relaxed">{selectedHub.details}</p>
 
-              <div className="mt-6 flex justify-end">
-                <a
-                  href={buildWhatsAppLink(`مرحباً، أود الاستفسار عن خدمات النجاح والتسويق في (${selectedHub.name} - ${selectedHub.country})`)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-l from-brass-600 to-brass-500 text-night-950 font-extrabold text-sm px-6 py-3 hover:brightness-110 transition-all"
-                >
-                  تواصل مع فريق {selectedHub.name}
-                  <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-                </a>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            <div className="mt-6 flex justify-end">
+              <a
+                href={buildWhatsAppLink(`مرحباً، أود الاستفسار عن خدمات النجاح والتسويق في (${selectedHub.name} - ${selectedHub.country})`)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-l from-brass-600 to-brass-500 text-night-950 font-extrabold text-sm px-6 py-3 hover:brightness-110 transition-all"
+              >
+                تواصل مع فريق {selectedHub.name}
+                <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+              </a>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

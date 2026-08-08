@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
 import { Quote, ChevronDown, ArrowLeft, Sparkles, MessageCircle } from "lucide-react";
 import SectionHeading from "@/components/SectionHeading";
 import Reveal from "@/components/Reveal";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import LazyImage from "@/components/LazyImage";
-import { TESTIMONIALS } from "@/lib/siteData";
+import { TESTIMONIALS, getInitials } from "@/lib/siteData";
 
 /* ============ Testimonials ============ */
 
@@ -36,7 +35,7 @@ export function TestimonialsSection() {
                 <Quote className="absolute top-6 left-6 w-11 h-11 text-brass-500/15 group-hover:text-brass-500/25 transition-colors" aria-hidden="true" />
 
                 <div>
-                  <div className="flex gap-1 mb-5" aria-label="تقييم 5 من 5">
+                  <div className="flex gap-1 mb-5" role="img" aria-label="تقييم 5 من 5">
                     {[...Array(5)].map((_, idx) => (
                       <svg key={idx} viewBox="0 0 20 20" className="w-4 h-4 fill-brass-500" aria-hidden="true">
                         <path d="M9.05 2.93c.3-.92 1.6-.92 1.9 0l1.29 3.97a1 1 0 00.95.69h4.18c.97 0 1.37 1.24.59 1.81l-3.38 2.46a1 1 0 00-.36 1.12l1.29 3.97c.3.92-.76 1.68-1.54 1.11l-3.38-2.46a1 1 0 00-1.18 0l-3.38 2.46c-.78.57-1.84-.19-1.54-1.11l1.29-3.97a1 1 0 00-.36-1.12L2.04 9.4c-.78-.57-.38-1.81.59-1.81h4.18a1 1 0 00.95-.69l1.29-3.97z" />
@@ -54,22 +53,25 @@ export function TestimonialsSection() {
                       className="absolute -inset-0.5 rounded-full bg-gradient-to-br from-brass-400 to-brass-600 opacity-70"
                       aria-hidden="true"
                     />
-                    <LazyImage
-                      src={t.avatar}
-                      alt={t.name}
-                      wrapperClassName="relative w-12 h-12 rounded-full overflow-hidden bg-slate-100"
-                      className="w-full h-full object-cover"
-                    />
+                    {t.avatar ? (
+                      <LazyImage
+                        src={t.avatar}
+                        alt={t.name}
+                        wrapperClassName="relative w-12 h-12 rounded-full overflow-hidden bg-slate-100"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div
+                        className="relative w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-night-800 to-night-950 flex items-center justify-center"
+                        role="img"
+                        aria-label={`صورة ${t.name}`}
+                      >
+                        <span className="font-display text-sm font-black text-brass-300">{getInitials(t.name)}</span>
+                      </div>
+                    )}
                   </div>
                   <div>
-                    <p className="font-extrabold text-sm text-night-900 flex items-center gap-1.5">
-                      {t.name}
-                      <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-mint-500 text-white" title="عميل موثق">
-                        <svg viewBox="0 0 12 12" className="w-2.5 h-2.5" fill="none" aria-hidden="true">
-                          <path d="M2.5 6.2l2.3 2.3 4.7-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </span>
-                    </p>
+                    <p className="font-extrabold text-sm text-night-900">{t.name}</p>
                     <p className="text-xs text-muted-foreground font-bold mt-1">{t.role}</p>
                   </div>
                 </figcaption>
@@ -135,11 +137,12 @@ export function FAQSection() {
                     type="button"
                     onClick={() => setOpenIndex(open ? -1 : i)}
                     aria-expanded={open}
+                    aria-controls={`faq-panel-${i}`}
                     className="w-full flex items-center justify-between gap-4 px-5 sm:px-6 py-4.5 sm:py-5 text-right"
                   >
-                    <h3 className="text-sm sm:text-base font-extrabold text-night-900 leading-snug">
+                    <span className="text-sm sm:text-base font-extrabold text-night-900 leading-snug">
                       {faq.q}
-                    </h3>
+                    </span>
                     <span
                       className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
                         open
@@ -150,20 +153,17 @@ export function FAQSection() {
                       <ChevronDown className="w-4 h-4" aria-hidden="true" />
                     </span>
                   </button>
-                  <AnimatePresence initial={false}>
-                    {open && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] as const }}
-                      >
-                        <p className="px-5 sm:px-6 pb-5 sm:pb-6 text-sm text-muted-foreground font-medium leading-loose">
-                          {faq.a}
-                        </p>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  <div
+                    id={`faq-panel-${i}`}
+                    className={`accordion-panel ${open ? "open" : ""}`}
+                    aria-hidden={!open}
+                  >
+                    <div>
+                      <p className="px-5 sm:px-6 pb-5 sm:pb-6 text-sm text-muted-foreground font-medium leading-loose">
+                        {faq.a}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </Reveal>
             );

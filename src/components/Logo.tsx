@@ -1,18 +1,13 @@
-import { motion } from "framer-motion";
-
-interface LogoProps {
+type LogoProps = {
   size?: number;
   animated?: boolean;
   light?: boolean;
-}
+};
 
 export default function Logo({ size = 36, animated = true, light = false }: LogoProps) {
   return (
-    <motion.div
-      className="flex items-center gap-2.5 select-none cursor-pointer group shrink-0"
-      initial={animated ? { opacity: 0, x: 10 } : false}
-      animate={{ opacity: 1, x: 0 }}
-      whileHover="hover"
+    <div
+      className={`flex items-center gap-2.5 select-none cursor-pointer group shrink-0 ${animated ? "fade-x-in" : ""}`}
       dir="rtl"
       aria-label="دلّني"
     >
@@ -64,13 +59,11 @@ export default function Logo({ size = 36, animated = true, light = false }: Logo
           <circle cx="10" cy="15" r="4.5" fill="url(#pinHaloGrad)" />
 
           {/* Growth arrow */}
-          <motion.g
-            variants={{ hover: { x: 2, y: -2, transition: { duration: 0.25 } } }}
-          >
+          <g className="transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
             <path d="M 14 44 L 45 11" stroke="url(#pinHaloGrad)" strokeWidth="4.5" strokeLinecap="round" />
             <path d="M 11 47 L 38 18" stroke="url(#pinHaloGrad)" strokeWidth="2.2" strokeLinecap="round" opacity="0.85" />
             <path d="M 33 11 L 46 10 L 45 23 L 40 17 Z" fill="url(#pinHaloGrad)" />
-          </motion.g>
+          </g>
 
           {/* Compass tip */}
           <path d="M 27 47 L 23 53 L 27 51 L 31 53 Z" fill="#ffd98a" />
@@ -92,6 +85,6 @@ export default function Logo({ size = 36, animated = true, light = false }: Logo
           </span>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 }

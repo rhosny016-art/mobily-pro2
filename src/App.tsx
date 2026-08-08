@@ -1,5 +1,5 @@
 import { useEffect, lazy, Suspense } from "react";
-import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";import { MotionConfig } from "framer-motion";
+import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import Layout from "@/components/Layout";
 import LoadingFallback from "@/components/LoadingFallback";
 import ScrollProgress from "@/components/ui/ScrollProgress";
@@ -30,30 +30,28 @@ function ScrollToTop() {
 
 export default function App() {
   return (
-    <MotionConfig reducedMotion="user">
-      <BrowserRouter>
-        <Preloader />
-        <ScrollProgress />
-        <CursorGlow />
-        <ScrollToTop />
-        <Suspense fallback={<LoadingFallback />}>
-          <Routes>
-            <Route element={<Layout />}>
-              <Route path="/" element={<Home />} />
-              <Route path="/services" element={<Services />} />
-              <Route path="/about" element={<About />} />
-              <Route path="*" element={<NotFound />} />
-            </Route>
-            <Route path="/dashboard/login" element={<DashboardLogin />} />
-            <Route path="/dashboard" element={<DashboardLayout />}>
-              <Route index element={<DashboardStats />} />
-              <Route path="services" element={<DashboardServices />} />
-              <Route path="requests" element={<DashboardRequests />} />
-              <Route path="settings" element={<DashboardSettings />} />
-            </Route>
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
-    </MotionConfig>
+    <BrowserRouter>
+      <Preloader />
+      <ScrollProgress />
+      <CursorGlow />
+      <ScrollToTop />
+      <Suspense fallback={<LoadingFallback />}>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/services" element={<Services />} />
+            <Route path="/about" element={<About />} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
+          <Route path="/dashboard/login" element={<DashboardLogin />} />
+          <Route path="/dashboard" element={<DashboardLayout />}>
+            <Route index element={<DashboardStats />} />
+            <Route path="services" element={<DashboardServices />} />
+            <Route path="requests" element={<DashboardRequests />} />
+            <Route path="settings" element={<DashboardSettings />} />
+          </Route>
+        </Routes>
+      </Suspense>
+    </BrowserRouter>
   );
 }

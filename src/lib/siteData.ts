@@ -202,7 +202,7 @@ export const STATS = [
   { value: "+250", label: "عميل سعيد" },
   { value: "+500", label: "مشروع ناجح" },
   { value: "+300%", label: "متوسط نمو الظهور" },
-  { value: "4.9", label: "تقييم عملائنا" },
+  { value: "100%", label: "شفافية في التقارير" },
 ];
 
 export const WHY_CHOOSE_US = [
@@ -217,28 +217,35 @@ export const TESTIMONIALS = [
     name: "أحمد مصطفى",
     role: "صاحب مطعم - القاهرة",
     message: "قبل التعامل مع دلّني ما كانش حد بيلاقينا على الخريطة. دلوقتي بنستقبل مكالمات يومية من عملاء جداد، والتقييم وصل 4.8. شغل محترم جداً.",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&q=90&auto=format&fit=facearea&facepad=2",
+    avatar: "",
   },
   {
     name: "د. سارة الخطيب",
     role: "مديرة مركز طبي - الجيزة",
     message: "حملات Google Ads اللي عملوها ضاعفت حجوزات العيادة في شهرين. التقارير واضحة والتواصل سريع على واتساب في أي وقت.",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600&q=90&auto=format&fit=facearea&facepad=2",
+    avatar: "",
   },
   {
     name: "محمود عبد الرحمن",
     role: "مؤسس متجر إلكتروني",
     message: "جربت أكتر من وكالة قبلهم، الفرق إن دلّني بيهتموا بالتفاصيل فعلاً. إعلانات تيك توك جابت مبيعات حقيقية مش مجرد مشاهدات.",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=600&q=90&auto=format&fit=facearea&facepad=2",
+    avatar: "",
   },
 ];
 
 export const TEAM = [
-  { name: "عبدالرحمن محمد", role: "المؤسس والمدير التنفيذي", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=90&auto=format&fit=facearea&facepad=2" },
-  { name: "منى حسن", role: "مديرة الحملات الإعلانية", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=800&q=90&auto=format&fit=facearea&facepad=2" },
-  { name: "كريم السيد", role: "متخصص Local SEO", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=800&q=90&auto=format&fit=facearea&facepad=2" },
-  { name: "ياسمين علي", role: "مسؤولة المحتوى والمراجعات", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800&q=90&auto=format&fit=facearea&facepad=2" },
+  { name: "عبدالرحمن محمد", role: "المؤسس والمدير التنفيذي", avatar: "" },
+  { name: "منى حسن", role: "مديرة الحملات الإعلانية", avatar: "" },
+  { name: "كريم السيد", role: "متخصص Local SEO", avatar: "" },
+  { name: "ياسمين علي", role: "مسؤولة المحتوى والمراجعات", avatar: "" },
 ];
+
+export function getInitials(name: string): string {
+  const parts = name.replace(/^د\.?\s*/i, "").split(/\s+/).filter(Boolean);
+  const first = parts[0]?.charAt(0) ?? "";
+  const last = parts.length > 1 ? parts[parts.length - 1].charAt(0) : "";
+  return (first + last).trim() || "؟";
+}
 
 export interface SiteSettings {
   site_name: string;

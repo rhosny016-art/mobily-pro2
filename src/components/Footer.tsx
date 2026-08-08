@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Clock, Mail, MapPin, Phone, ArrowUp, Star } from "lucide-react";
+import { Clock, Mail, MapPin, Phone, ArrowUp } from "lucide-react";
 import Logo from "./Logo";
 import { getSiteSettings } from "@/lib/store";
 import { DEFAULT_SETTINGS } from "@/lib/siteData";
@@ -59,13 +59,8 @@ export default function Footer() {
           <p className="mt-5 text-sm leading-relaxed text-slate-400 font-medium max-w-sm">{s.footer_text}</p>
 
           <div className="flex items-center gap-2 mt-5 text-sm font-bold text-white">
-            <span className="flex text-brass-400" aria-hidden="true">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className="w-4 h-4 fill-brass-400" />
-              ))}
-            </span>
-            <span className="font-display">4.9</span>
-            <span className="text-slate-400 font-medium text-xs">تقييم عملائنا على Google</span>
+            <Clock className="w-4 h-4 text-brass-400" aria-hidden="true" />
+            <span className="text-slate-400 font-medium text-xs">متاحون للرد المباشر — استشارتك الأولى مجانية</span>
           </div>
 
           <div className="flex gap-3 mt-6">

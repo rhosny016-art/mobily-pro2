@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import { Eye, Heart, Target, Compass } from "lucide-react";
+import type { CSSProperties } from "react";
 import PageHero from "@/components/PageHero";
 import SectionHeading from "@/components/SectionHeading";
 import Reveal from "@/components/Reveal";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import LazyImage from "@/components/LazyImage";
-import { DEFAULT_SETTINGS, TEAM } from "@/lib/siteData";
+import { DEFAULT_SETTINGS, TEAM, getInitials } from "@/lib/siteData";
 import { getSiteSettings } from "@/lib/store";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import { useInView } from "@/hooks/useInView";
+import { cn } from "@/utils/cn";
 
 const VALUES = [
   {
@@ -33,6 +35,9 @@ export default function About() {
   useEffect(() => {
     getSiteSettings().then(setS);
   }, []);
+
+  const storyReveal = useInView<HTMLDivElement>({ amount: 0.2 });
+  const statsReveal = useInView<HTMLDivElement>({ amount: 0.2 });
 
   usePageMeta({
     title: "من نحن — قصة وكالة دلّني للتسويق الرقمي",
@@ -64,33 +69,27 @@ export default function About() {
       {/* Story + stats */}
       <section className="py-16 md:py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          <Reveal>
+          <div ref={storyReveal.ref}>
             <SectionHeading eyebrow="قصتنا" title="كيف بدأت دلّني؟" center={false} />
-            <div className="space-y-5 -mt-6">
+            <div className={cn("space-y-5 -mt-6 reveal-stagger", storyReveal.inView && "in-view")}>
               {storyParagraphs.map((p, i) => (
-                <motion.p
+                <p
                   key={i}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, amount: 0.2 }}
-                  transition={{ delay: i * 0.08, duration: 0.5 }}
+                  style={{ "--stagger-delay": `${i * 0.08}s` } as CSSProperties}
                   className="text-foreground/75 leading-loose font-medium"
                 >
                   {p}
-                </motion.p>
+                </p>
               ))}
             </div>
-          </Reveal>
+          </div>
 
-          <Reveal delay={0.15}>
-            <div className="grid grid-cols-2 gap-5">
+          <div ref={statsReveal.ref}>
+            <div className={cn("grid grid-cols-2 gap-5 reveal-stagger", statsReveal.inView && "in-view")}>
               {s.stats.map((st, i) => (
-                <motion.div
+                <div
                   key={st.label}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true, amount: 0.2 }}
-                  transition={{ delay: i * 0.08, duration: 0.5 }}
+                  style={{ "--stagger-delay": `${i * 0.08}s` } as CSSProperties}
                   className={`rounded-[22px] p-6 sm:p-8 text-center shadow-card ${
                     i % 2 === 0
                       ? "bg-night-950 text-white relative overflow-hidden"
@@ -106,9 +105,12 @@ export default function About() {
                   <p className={`mt-2 text-sm font-bold ${i % 2 === 0 ? "text-slate-300/85" : "text-muted-foreground"}`}>
                     {st.label}
                   </p>
-                </motion.div>
+                </div>
               ))}
-              <div className="col-span-2 rounded-[22px] border border-brass-500/25 bg-brass-500/5 p-5 sm:p-6 flex items-center gap-4">
+              <div
+                style={{ "--stagger-delay": `${s.stats.length * 0.08}s` } as CSSProperties}
+                className="col-span-2 rounded-[22px] border border-brass-500/25 bg-brass-500/5 p-5 sm:p-6 flex items-center gap-4"
+              >
                 <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-brass-400 to-brass-600 flex items-center justify-center text-night-950 shrink-0">
                   <Compass className="w-5 h-5" aria-hidden="true" />
                 </div>
@@ -117,7 +119,7 @@ export default function About() {
                 </p>
               </div>
             </div>
-          </Reveal>
+          </div>
         </div>
       </section>
 
@@ -156,12 +158,22 @@ export default function About() {
                   <div className="relative w-32 h-32 sm:w-40 sm:h-40 mx-auto mb-5">
                     <div className="absolute inset-0 rounded-full bg-gradient-to-br from-brass-400 to-brass-600 opacity-0 group-hover:opacity-100 blur-md scale-105 transition-opacity duration-300" aria-hidden="true" />
                     <div className="relative h-full">
-                      <LazyImage
-                        src={m.avatar}
-                        alt={m.name}
-                        wrapperClassName="w-full h-full rounded-full border-4 border-white ring-2 ring-line overflow-hidden transition-transform duration-300 group-hover:scale-105 shadow-card"
-                        className="w-full h-full object-cover"
-                      />
+                      {m.avatar ? (
+                        <LazyImage
+                          src={m.avatar}
+                          alt={m.name}
+                          wrapperClassName="w-full h-full rounded-full border-4 border-white ring-2 ring-line overflow-hidden transition-transform duration-300 group-hover:scale-105 shadow-card"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div
+                          className="w-full h-full rounded-full border-4 border-white ring-2 ring-line bg-gradient-to-br from-night-800 to-night-950 flex items-center justify-center transition-transform duration-300 group-hover:scale-105 shadow-card"
+                          role="img"
+                          aria-label={`صورة ${m.name}`}
+                        >
+                          <span className="font-display text-2xl font-black text-brass-300">{getInitials(m.name)}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <h3 className="font-extrabold text-night-900">{m.name}</h3>

@@ -1,8 +1,6 @@
-import { useEffect, useState } from "react";
-import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import {
   Search,
-  Star,
   MapPin,
   Phone,
   Navigation,
@@ -13,9 +11,10 @@ import {
   Sparkles,
   Radio,
 } from "lucide-react";
+import type { CSSProperties } from "react";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
 import { Magnetic, TiltCard } from "@/components/ui";
-import { EASE_OUT_EXPO, lineReveal, staggerContainer, prefersReducedMotion } from "@/lib/motion";
+import { prefersReducedMotion } from "@/lib/motion";
 
 const SEARCH_SUGGESTIONS = [
   "أفضل مطعم قريب مني...",
@@ -37,12 +36,36 @@ const FLOAT_PINS = [
 
 export default function Hero() {
   const [searchIndex, setSearchIndex] = useState(0);
-  const { scrollYProgress } = useScroll();
   const reduced = prefersReducedMotion();
 
-  const visualY = useTransform(scrollYProgress, [0, 0.35], [0, reduced ? 0 : 90]);
-  const glowY = useTransform(scrollYProgress, [0, 0.4], [0, reduced ? 0 : -60]);
-  const textOpacity = useTransform(scrollYProgress, [0, 0.25], [1, 0.4]);
+  const bgRef = useRef<HTMLDivElement>(null);
+  const visualRef = useRef<HTMLDivElement>(null);
+  const copyRef = useRef<HTMLDivElement>(null);
+
+  // Scroll parallax + copy fade (no animation library).
+  useEffect(() => {
+    if (reduced) return;
+    let raf = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const max = document.documentElement.scrollHeight - window.innerHeight;
+        const p = max > 0 ? window.scrollY / max : 0;
+        const visual = Math.min(p / 0.35, 1) * 90;
+        const glow = Math.min(p / 0.4, 1) * -60;
+        const text = 1 - Math.min(p / 0.25, 1) * 0.6;
+        bgRef.current?.style.setProperty("--hero-glow-y", `${glow.toFixed(1)}px`);
+        visualRef.current?.style.setProperty("--hero-visual-y", `${visual.toFixed(1)}px`);
+        if (copyRef.current) copyRef.current.style.opacity = text.toFixed(2);
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(raf);
+    };
+  }, [reduced]);
 
   useEffect(() => {
     if (reduced) return;
@@ -55,13 +78,18 @@ export default function Hero() {
   return (
     <section id="hero" className="relative bg-night-950 overflow-hidden scroll-mt-24">
       {/* ===== Backdrop ===== */}
-      <motion.div style={{ y: glowY }} className="absolute inset-0" aria-hidden="true">
+      <div
+        ref={bgRef}
+        className="absolute inset-0"
+        aria-hidden="true"
+        style={{ transform: "translate3d(0, var(--hero-glow-y, 0px), 0)", willChange: "transform" }}
+      >
         <div className="absolute inset-0 bg-night-grid opacity-50" />
         <div className="absolute -top-40 right-[6%] w-[640px] h-[640px] rounded-full bg-brass-500/12 blur-[160px] animate-aurora" />
         <div className="absolute -bottom-48 left-[4%] w-[560px] h-[560px] rounded-full bg-night-600/40 blur-[150px] animate-aurora" style={{ animationDelay: "-6s" }} />
         <div className="absolute top-1/3 left-1/3 w-[420px] h-[420px] rounded-full bg-brass-600/8 blur-[140px]" />
         <div className="absolute inset-0 bg-noise opacity-[0.04]" />
-      </motion.div>
+      </div>
 
       {/* Floating pin particles */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
@@ -87,33 +115,26 @@ export default function Hero() {
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 md:pt-36 pb-16 md:pb-24 grid lg:grid-cols-[1.05fr_0.95fr] gap-14 lg:gap-8 items-center">
         {/* ===== Copy ===== */}
-        <motion.div style={{ opacity: textOpacity }} className="text-right w-full order-1">
-          <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15, duration: 0.6, ease: EASE_OUT_EXPO }}
-            className="inline-flex items-center gap-2.5 glass-dark text-slate-200 text-xs sm:text-sm font-bold px-4 py-2 rounded-full mb-6"
+        <div ref={copyRef} className="text-right w-full order-1">
+          <div
+            className="fade-up inline-flex items-center gap-2.5 glass-dark text-slate-200 text-xs sm:text-sm font-bold px-4 py-2 rounded-full mb-6"
+            style={{ "--anim-delay": "0.15s" } as CSSProperties}
           >
             <span className="relative flex h-2 w-2">
               <span className="animate-ping-ring absolute inline-flex h-full w-full rounded-full bg-brass-400" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-brass-400" />
             </span>
             وكالة تسويق رقمي متكاملة — Local SEO & Ads
-          </motion.div>
+          </div>
 
-          <motion.h1
-            variants={staggerContainer}
-            initial="hidden"
-            animate="visible"
-            className="text-[40px] sm:text-5xl lg:text-[58px] font-black text-white leading-[1.15] tracking-tight"
-          >
+          <h1 className="text-[40px] sm:text-5xl lg:text-[58px] font-black text-white leading-[1.15] tracking-tight">
             <span className="block overflow-hidden pb-1">
-              <motion.span variants={lineReveal} custom={0} className="block text-gradient-fog">
+              <span className="line-reveal block text-gradient-fog" style={{ "--line-delay": "0.15s" } as CSSProperties}>
                 نضع نشاطك التجاري
-              </motion.span>
+              </span>
             </span>
             <span className="block overflow-hidden pb-2">
-              <motion.span variants={lineReveal} custom={1} className="block">
+              <span className="line-reveal block" style={{ "--line-delay": "0.35s" } as CSSProperties}>
                 على
                 <span className="relative inline-block mx-2">
                   <span className="text-gradient-gold">خريطة النجاح</span>
@@ -123,36 +144,31 @@ export default function Hero() {
                     fill="none"
                     aria-hidden="true"
                   >
-                    <motion.path
+                    <path
+                      className="path-draw"
+                      style={{ animationDelay: "1.1s" } as CSSProperties}
                       d="M3 9C55 4 165 3 217 9"
                       stroke="currentColor"
                       strokeWidth="5"
                       strokeLinecap="round"
-                      initial={{ pathLength: 0 }}
-                      animate={{ pathLength: 1 }}
-                      transition={{ delay: 1.1, duration: 0.8, ease: EASE_OUT_EXPO }}
                     />
                   </svg>
                 </span>
-              </motion.span>
+              </span>
             </span>
-          </motion.h1>
+          </h1>
 
-          <motion.p
-            initial={{ opacity: 0, y: 22 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.45, ease: EASE_OUT_EXPO }}
-            className="mt-7 text-sm sm:text-base md:text-lg text-slate-300/85 font-medium leading-relaxed max-w-xl"
+          <p
+            className="fade-up mt-7 text-sm sm:text-base md:text-lg text-slate-300/85 font-medium leading-relaxed max-w-xl"
+            style={{ "--anim-delay": "0.2s" } as CSSProperties}
           >
             نساعد الأنشطة التجارية على تصدّر نتائج البحث المحلي وجذب عملاء حقيقيين —
             عبر خرائط Google وحملات إعلانية مدروسة على كل المنصات.
-          </motion.p>
+          </p>
 
-          <motion.div
-            initial={{ opacity: 0, y: 22 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7, duration: 0.7, ease: EASE_OUT_EXPO }}
-            className="mt-9 flex flex-wrap items-center gap-4"
+          <div
+            className="fade-up mt-9 flex flex-wrap items-center gap-4"
+            style={{ "--anim-delay": "0.7s" } as CSSProperties}
           >
             <Magnetic>
               <a
@@ -175,23 +191,17 @@ export default function Hero() {
               استكشف خدماتنا
               <ArrowDown className="w-4 h-4 animate-bob" aria-hidden="true" />
             </a>
-          </motion.div>
+          </div>
 
           {/* Trust row */}
-          <motion.div
-            initial={{ opacity: 0, y: 22 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.85, duration: 0.7, ease: EASE_OUT_EXPO }}
-            className="mt-10 flex flex-wrap items-center gap-x-7 gap-y-4"
+          <div
+            className="fade-up mt-10 flex flex-wrap items-center gap-x-7 gap-y-4"
+            style={{ "--anim-delay": "0.85s" } as CSSProperties}
           >
             <div className="flex items-center gap-2.5">
-              <div className="flex text-brass-400" aria-hidden="true">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-4 h-4 fill-brass-400" />
-                ))}
-              </div>
+              <Sparkles className="w-5 h-5 text-brass-400" aria-hidden="true" />
               <span className="text-sm font-bold text-white">
-                4.9 <span className="text-slate-400 font-medium">تقييم عملائنا</span>
+                استشارة <span className="text-slate-400 font-medium">مجانية أولاً</span>
               </span>
             </div>
             <div className="hidden sm:block w-px h-6 bg-white/12" aria-hidden="true" />
@@ -202,14 +212,12 @@ export default function Hero() {
             <span className="text-sm font-bold text-white">
               تقارير <span className="text-slate-400 font-medium">أسبوعية شفافة</span>
             </span>
-          </motion.div>
+          </div>
 
           {/* Platform chips */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1, duration: 0.6, ease: EASE_OUT_EXPO }}
-            className="mt-8 flex flex-wrap items-center gap-2"
+          <div
+            className="fade-up mt-8 flex flex-wrap items-center gap-2"
+            style={{ "--anim-delay": "1s" } as CSSProperties}
           >
             <span className="text-[11px] font-bold text-slate-500 pl-1">نُتقن:</span>
             {PLATFORM_CHIPS.map((p) => (
@@ -220,11 +228,15 @@ export default function Hero() {
                 {p}
               </span>
             ))}
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
 
         {/* ===== Visual ===== */}
-        <motion.div style={{ y: visualY }} className="order-2 relative flex items-center justify-center min-h-[440px] sm:min-h-[520px]">
+        <div
+          ref={visualRef}
+          className="order-2 relative flex items-center justify-center min-h-[440px] sm:min-h-[520px]"
+          style={{ transform: "translate3d(0, var(--hero-visual-y, 0px), 0)", willChange: "transform" }}
+        >
           {/* Radar rings */}
           <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
             <div className="relative w-[380px] h-[380px] sm:w-[520px] sm:h-[520px] rounded-full">
@@ -277,11 +289,9 @@ export default function Hero() {
           </svg>
 
           {/* Floating chip: growth */}
-          <motion.div
-            initial={{ opacity: 0, y: -18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.9, duration: 0.7, ease: EASE_OUT_EXPO }}
-            className="absolute top-0 right-0 sm:top-6 sm:right-2 z-20"
+          <div
+            className="fade-up absolute top-0 right-0 sm:top-6 sm:right-2 z-20"
+            style={{ "--anim-delay": "0.9s" } as CSSProperties}
           >
             <div className="animate-float-slow glass-strong rounded-2xl px-4 py-3 shadow-card flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brass-400 to-brass-600 flex items-center justify-center text-night-950">
@@ -292,14 +302,12 @@ export default function Hero() {
                 <p className="text-[11px] font-bold text-slate-300 mt-1">نمو الظهور المحلي</p>
               </div>
             </div>
-          </motion.div>
+          </div>
 
           {/* Floating chip: calls */}
-          <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.05, duration: 0.7, ease: EASE_OUT_EXPO }}
-            className="absolute bottom-12 left-0 sm:bottom-16 sm:left-2 z-20"
+          <div
+            className="fade-up absolute bottom-12 left-0 sm:bottom-16 sm:left-2 z-20"
+            style={{ "--anim-delay": "1.05s" } as CSSProperties}
           >
             <div
               className="animate-float-slow glass-strong rounded-2xl px-4 py-3 shadow-card flex items-center gap-3"
@@ -313,14 +321,12 @@ export default function Hero() {
                 <p className="text-[11px] font-bold text-slate-300 mt-1">مكالمة شهرياً من الخريطة</p>
               </div>
             </div>
-          </motion.div>
+          </div>
 
           {/* Local pack card */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.94, y: 24 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.9, ease: EASE_OUT_EXPO }}
-            className="relative z-10 w-full max-w-[340px] sm:max-w-[380px]"
+          <div
+            className="scale-in relative z-10 w-full max-w-[340px] sm:max-w-[380px]"
+            style={{ "--anim-delay": "0.5s" } as CSSProperties}
           >
             <TiltCard>
               <div className="glass-strong rounded-[26px] p-5 sm:p-6 shadow-glass gold-ring">
@@ -328,18 +334,9 @@ export default function Hero() {
                 <div className="flex items-center gap-2.5 bg-night-950/70 border border-white/10 rounded-xl px-3.5 py-2.5 mb-4">
                   <Search className="w-4 h-4 text-brass-400 shrink-0" aria-hidden="true" />
                   <div className="relative h-5 overflow-hidden flex-1 flex items-center">
-                    <AnimatePresence mode="wait">
-                      <motion.span
-                        key={searchIndex}
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -12 }}
-                        transition={{ duration: 0.35 }}
-                        className="text-xs font-bold text-slate-300 whitespace-nowrap"
-                      >
-                        {SEARCH_SUGGESTIONS[searchIndex]}
-                      </motion.span>
-                    </AnimatePresence>
+                    <span key={searchIndex} className="swap-in block text-xs font-bold text-slate-300 whitespace-nowrap">
+                      {SEARCH_SUGGESTIONS[searchIndex]}
+                    </span>
                   </div>
                 </div>
 
@@ -351,13 +348,8 @@ export default function Hero() {
                   <div className="min-w-0">
                     <p className="text-sm font-extrabold text-white truncate">نشاطك التجاري هنا</p>
                     <div className="flex items-center gap-1.5 mt-1">
-                      <div className="flex text-brass-400" aria-hidden="true">
-                        {[...Array(5)].map((_, i) => (
-                          <Star key={i} className="w-3 h-3 fill-brass-400" />
-                        ))}
-                      </div>
-                      <span className="text-[11px] font-bold text-slate-300">4.9</span>
-                      <span className="text-[11px] text-slate-500">· +250 مراجعة</span>
+                      <span className="text-[11px] font-bold text-mint-400">موثق</span>
+                      <span className="text-[11px] text-slate-500">· حساب Google Business مُحسّن</span>
                     </div>
                     <span className="inline-flex items-center gap-1.5 mt-1.5 text-[11px] font-bold text-mint-400 bg-mint-500/12 border border-mint-500/25 rounded-full px-2.5 py-0.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-mint-400 animate-pulse-soft" />
@@ -405,37 +397,33 @@ export default function Hero() {
                 </div>
               </div>
             </TiltCard>
-          </motion.div>
+          </div>
 
           {/* Live badge */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 1.2, duration: 0.6, ease: EASE_OUT_EXPO }}
-            className="absolute -top-2 left-1/2 -translate-x-1/2 z-20"
+          <div
+            className="scale-pop absolute -top-2 left-1/2 -translate-x-1/2 z-20"
+            style={{ "--anim-delay": "1.2s" } as CSSProperties}
           >
             <span className="inline-flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold text-brass-300 bg-night-950/80 border border-brass-500/30 rounded-full px-3 py-1.5 backdrop-blur">
               <Radio className="w-3 h-3 animate-pulse" aria-hidden="true" />
               تحديث مباشر لنتائجك
             </span>
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       </div>
 
       {/* Scroll cue */}
-      <motion.a
+      <a
         href="#services"
         aria-label="انتقل إلى الخدمات"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.4, duration: 0.6 }}
-        className="absolute bottom-5 left-1/2 -translate-x-1/2 hidden lg:flex flex-col items-center gap-1.5 text-slate-500 hover:text-brass-300 transition-colors z-10"
+        className="fade-in absolute bottom-5 left-1/2 -translate-x-1/2 hidden lg:flex flex-col items-center gap-1.5 text-slate-500 hover:text-brass-300 transition-colors z-10"
+        style={{ "--anim-delay": "1.4s" } as CSSProperties}
       >
         <span className="text-[10px] font-bold tracking-wide">اكتشف المزيد</span>
         <span className="flex items-center gap-1">
           <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
         </span>
-      </motion.a>
+      </a>
     </section>
   );
 }

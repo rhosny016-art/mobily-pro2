@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 
 interface LazyImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   src: string;
@@ -56,25 +55,9 @@ export default function LazyImage({
   return (
     <div className={wrapperClassName} ref={imgRef}>
       {/* Skeleton Shimmer Placeholder */}
-      <AnimatePresence>
-        {!isLoaded && !hasError && (
-          <motion.div
-            className="absolute inset-0 bg-gradient-to-r from-slate-100 via-slate-200 to-slate-100 z-10"
-            animate={{
-              backgroundPosition: ["200% 0", "-200% 0"],
-            }}
-            transition={{
-              duration: 1.5,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-            style={{
-              backgroundSize: "200% 100%",
-            }}
-            exit={{ opacity: 0 }}
-          />
-        )}
-      </AnimatePresence>
+      {!isLoaded && !hasError && (
+        <div className="absolute inset-0 z-10 skeleton-shimmer" aria-hidden="true" />
+      )}
 
       {/* Actual Image */}
       {isInView && (
@@ -99,4 +82,3 @@ export default function LazyImage({
     </div>
   );
 }
-

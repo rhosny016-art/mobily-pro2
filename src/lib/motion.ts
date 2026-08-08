@@ -1,53 +1,3 @@
-import type { Variants } from "framer-motion";
-
-/** Signature easing used across the site — expo out for an expensive, premium feel. */
-export const EASE_OUT_EXPO = [0.16, 1, 0.3, 1] as const;
-export const EASE_IN_OUT_SOFT = [0.65, 0.05, 0.36, 1] as const;
-
-export const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 28, filter: "blur(6px)" },
-  visible: (i: number = 0) => ({
-    opacity: 1,
-    y: 0,
-    filter: "blur(0px)",
-    transition: { delay: i * 0.1, duration: 0.7, ease: EASE_OUT_EXPO },
-  }),
-};
-
-export const fadeIn: Variants = {
-  hidden: { opacity: 0 },
-  visible: (i: number = 0) => ({
-    opacity: 1,
-    transition: { delay: i * 0.1, duration: 0.7, ease: EASE_OUT_EXPO },
-  }),
-};
-
-export const scaleIn: Variants = {
-  hidden: { opacity: 0, scale: 0.94, y: 20 },
-  visible: (i: number = 0) => ({
-    opacity: 1,
-    scale: 1,
-    y: 0,
-    transition: { delay: i * 0.08, duration: 0.7, ease: EASE_OUT_EXPO },
-  }),
-};
-
-export const staggerContainer: Variants = {
-  hidden: {},
-  visible: (delayChildren: number = 0) => ({
-    transition: { staggerChildren: 0.09, delayChildren },
-  }),
-};
-
-export const lineReveal: Variants = {
-  hidden: { opacity: 0, y: "110%" },
-  visible: (i: number = 0) => ({
-    opacity: 1,
-    y: "0%",
-    transition: { delay: i * 0.09, duration: 0.85, ease: EASE_OUT_EXPO },
-  }),
-};
-
 /** Respect reduced motion for interactive helpers. */
 export function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -56,4 +6,48 @@ export function prefersReducedMotion(): boolean {
 /** Coarse pointer detection (touch-first). */
 export function isFinePointer(): boolean {
   return typeof window !== "undefined" && window.matchMedia("(pointer: fine)").matches;
+}
+
+/** Signature easings used across the site (CSS timing functions). */
+export const EASE_OUT_EXPO = "cubic-bezier(0.16, 1, 0.3, 1)";
+export const EASE_IN_OUT_SOFT = "cubic-bezier(0.65, 0.05, 0.36, 1)";
+
+/** Cubic ease-out ≈ framer-motion's [0.22, 1, 0.36, 1]. */
+function easeOutCubic(t: number): number {
+  return 1 - Math.pow(1 - t, 3);
+}
+
+interface TweenOptions {
+  duration?: number;
+  delay?: number;
+  onUpdate: (v: number) => void;
+  onComplete?: () => void;
+}
+
+/**
+ * Lightweight rAF-based tween (replaces framer-motion's `animate`).
+ * Returns a cancel function.
+ */
+export function tween(from: number, to: number, { duration = 1, delay = 0, onUpdate, onComplete }: TweenOptions): () => void {
+  let raf = 0;
+  let done = false;
+  const start = performance.now() + delay * 1000;
+
+  const tick = (now: number) => {
+    if (done) return;
+    const t = Math.min(Math.max((now - start) / (duration * 1000), 0), 1);
+    onUpdate(from + (to - from) * easeOutCubic(t));
+    if (t < 1) {
+      raf = requestAnimationFrame(tick);
+    } else {
+      done = true;
+      onComplete?.();
+    }
+  };
+
+  raf = requestAnimationFrame(tick);
+  return () => {
+    done = true;
+    cancelAnimationFrame(raf);
+  };
 }

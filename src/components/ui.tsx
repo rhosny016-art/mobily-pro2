@@ -1,5 +1,4 @@
 import { useRef } from "react";
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import type { ReactNode } from "react";
 import { cn } from "@/utils/cn";
 import { isFinePointer, prefersReducedMotion } from "@/lib/motion";
@@ -62,35 +61,33 @@ interface MagneticProps {
   className?: string;
 }
 
+/** Cursor-attracted wrapper — CSS variables + transition, no animation library. */
 export function Magnetic({ children, strength = 0.35, className }: MagneticProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const sx = useSpring(x, { stiffness: 220, damping: 18, mass: 0.5 });
-  const sy = useSpring(y, { stiffness: 220, damping: 18, mass: 0.5 });
 
   if (!isFinePointer() || prefersReducedMotion()) {
     return <div className={className}>{children}</div>;
   }
 
   return (
-    <motion.div
+    <div
       ref={ref}
-      style={{ x: sx, y: sy }}
-      className={cn("inline-block", className)}
+      className={cn("magnetic", className)}
       onPointerMove={(e) => {
-        const rect = ref.current?.getBoundingClientRect();
-        if (!rect) return;
-        x.set((e.clientX - (rect.left + rect.width / 2)) * strength);
-        y.set((e.clientY - (rect.top + rect.height / 2)) * strength);
+        const el = ref.current;
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        el.style.setProperty("--mx", `${((e.clientX - (rect.left + rect.width / 2)) * strength).toFixed(1)}px`);
+        el.style.setProperty("--my", `${((e.clientY - (rect.top + rect.height / 2)) * strength).toFixed(1)}px`);
       }}
       onPointerLeave={() => {
-        x.set(0);
-        y.set(0);
+        const el = ref.current;
+        el?.style.setProperty("--mx", "0px");
+        el?.style.setProperty("--my", "0px");
       }}
     >
       {children}
-    </motion.div>
+    </div>
   );
 }
 
@@ -104,32 +101,31 @@ interface TiltCardProps {
 
 export function TiltCard({ children, className, maxTilt = 7 }: TiltCardProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const px = useMotionValue(0.5);
-  const py = useMotionValue(0.5);
-  const rotateX = useSpring(useTransform(py, [0, 1], [maxTilt, -maxTilt]), { stiffness: 160, damping: 20 });
-  const rotateY = useSpring(useTransform(px, [0, 1], [-maxTilt, maxTilt]), { stiffness: 160, damping: 20 });
 
   if (!isFinePointer() || prefersReducedMotion()) {
     return <div className={className}>{children}</div>;
   }
 
   return (
-    <motion.div
+    <div
       ref={ref}
-      style={{ rotateX, rotateY, transformPerspective: 1100 }}
-      className={cn("will-change-transform", className)}
+      className={cn("tilt-card", className)}
       onPointerMove={(e) => {
-        const rect = ref.current?.getBoundingClientRect();
-        if (!rect) return;
-        px.set((e.clientX - rect.left) / rect.width);
-        py.set((e.clientY - rect.top) / rect.height);
+        const el = ref.current;
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        const px = (e.clientX - rect.left) / rect.width;
+        const py = (e.clientY - rect.top) / rect.height;
+        el.style.setProperty("--rx", `${((0.5 - py) * maxTilt * 2).toFixed(2)}deg`);
+        el.style.setProperty("--ry", `${((px - 0.5) * maxTilt * 2).toFixed(2)}deg`);
       }}
       onPointerLeave={() => {
-        px.set(0.5);
-        py.set(0.5);
+        const el = ref.current;
+        el?.style.setProperty("--rx", "0deg");
+        el?.style.setProperty("--ry", "0deg");
       }}
     >
       {children}
-    </motion.div>
+    </div>
   );
 }

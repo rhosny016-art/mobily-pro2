@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { animate, useInView, motion } from "framer-motion";
 import {
   Sparkles,
   MessageCircle,
@@ -14,7 +13,6 @@ import {
   TrendingUp,
   PhoneCall,
   Eye,
-  Star,
   Zap,
 } from "lucide-react";
 import SectionHeading from "@/components/SectionHeading";
@@ -22,6 +20,8 @@ import Reveal from "@/components/Reveal";
 import ServiceCard from "@/components/ServiceCard";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import { ICON_MAP } from "@/lib/icons";
+import { prefersReducedMotion, tween } from "@/lib/motion";
+import { useInView } from "@/hooks/useInView";
 import { getServices, getSiteSettings } from "@/lib/store";
 import { DEFAULT_SETTINGS, SERVICES as DEFAULT_SERVICES, WHY_CHOOSE_US } from "@/lib/siteData";
 
@@ -57,6 +57,7 @@ export function PlatformStrip() {
             {[...PLATFORMS, ...PLATFORMS].map((p, i) => (
               <span
                 key={`${p}-${i}`}
+                aria-hidden={i >= PLATFORMS.length}
                 className="flex items-center gap-10 text-sm font-bold text-night-500/70 whitespace-nowrap"
               >
                 {p}
@@ -123,24 +124,25 @@ const RESULT_BARS = [
 const RESULT_KPIS = [
   { icon: PhoneCall, value: "+300%", label: "نمو المكالمات والاستفسارات", accent: "text-mint-400" },
   { icon: Eye, value: "+150%", label: "زيادة الظهور في الخرائط", accent: "text-brass-300" },
-  { icon: Star, value: "4.9/5", label: "متوسط تقييم مشاريع الشركاء", accent: "text-brass-300" },
+  { icon: Target, value: "24/7", label: "متابعة دائمة وتقارير دورية", accent: "text-brass-300" },
   { icon: Zap, value: "×3", label: "معدل تحويل الزيارات إلى عملاء", accent: "text-mint-400" },
 ];
 
 function AnimatedBar({ value, label, index }: { value: number; label: string; index: number }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-40px" });
+  const { ref, inView } = useInView<HTMLDivElement>({ margin: "-40px", amount: 0.4 });
   const [w, setW] = useState(0);
 
   useEffect(() => {
     if (!inView) return;
-    const controls = animate(0, value, {
+    if (prefersReducedMotion()) {
+      setW(value);
+      return;
+    }
+    return tween(0, value, {
       duration: 1.5,
       delay: index * 0.12,
-      ease: [0.22, 1, 0.36, 1] as const,
       onUpdate: (v) => setW(v),
     });
-    return () => controls.stop();
   }, [inView, value, index]);
 
   return (
@@ -281,11 +283,7 @@ export function ProcessSection() {
           <div className="hidden lg:block absolute top-[52px] right-[12%] left-[12%] h-[2px]" aria-hidden="true">
             <div className="absolute inset-0 bg-gradient-to-l from-transparent via-brass-500/35 to-transparent" />
             <div className="absolute inset-0 route-dash opacity-60" />
-            <motion.div
-              className="absolute top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-brass-500 shadow-[0_0_14px_rgba(237,155,47,0.9)]"
-              animate={{ left: ["5%", "95%"], opacity: [0.2, 1, 0.2] }}
-              transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
-            />
+            <div className="connector-dot absolute top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-brass-500 shadow-[0_0_14px_rgba(237,155,47,0.9)]" />
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
@@ -323,19 +321,20 @@ function parseStat(value: string): { prefix: string; num: number; decimals: numb
 }
 
 function CountUp({ value }: { value: string }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-60px" });
+  const { ref, inView } = useInView<HTMLSpanElement>({ margin: "-60px", amount: 0.4 });
   const { prefix, num, decimals, suffix } = parseStat(value);
   const [display, setDisplay] = useState("0");
 
   useEffect(() => {
     if (!inView) return;
-    const controls = animate(0, num, {
+    if (prefersReducedMotion()) {
+      setDisplay(num.toFixed(decimals));
+      return;
+    }
+    return tween(0, num, {
       duration: 1.8,
-      ease: [0.22, 1, 0.36, 1] as const,
       onUpdate: (v) => setDisplay(v.toFixed(decimals)),
     });
-    return () => controls.stop();
   }, [inView, num, decimals]);
 
   return (
